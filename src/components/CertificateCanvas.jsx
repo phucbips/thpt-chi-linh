@@ -55,13 +55,21 @@ const PrizeBadge = ({ prize, background, isFirst, icon, maxLongSize = 24 }) => {
 // ============================================================================
 const TeacherRoyalBackdrop = () => {
   const rosetteAngles = Array.from({ length: 28 }, (_, i) => i * (360 / 28));
+  const rayAngles = Array.from({ length: 36 }, (_, i) => i * 10);
+
   return (
     <svg className="absolute inset-0 w-full h-full pointer-events-none z-0" viewBox="0 0 1920 1080">
       <defs>
-        <radialGradient id="tr-bg" cx="52%" cy="46%" r="68%">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="55%" stopColor="#f8fafc" />
+        <radialGradient id="tr-bg" cx="50%" cy="48%" r="70%">
+          <stop offset="0%" stopColor="#fffdf9" />
+          <stop offset="52%" stopColor="#f8f6f0" />
           <stop offset="100%" stopColor="#e2e8f0" />
+        </radialGradient>
+
+        <radialGradient id="tr-center-halo" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#fef08a" stopOpacity="0.42" />
+          <stop offset="55%" stopColor="#f59e0b" stopOpacity="0.12" />
+          <stop offset="100%" stopColor="#f59e0b" stopOpacity="0" />
         </radialGradient>
 
         <linearGradient id="tr-navy-deep" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -105,26 +113,72 @@ const TeacherRoyalBackdrop = () => {
         </radialGradient>
       </defs>
 
-      {/* Nền lụa trắng ngọc trai */}
+      {/* Nền lụa trắng ngà ấm sang trọng */}
       <rect width="1920" height="1080" fill="url(#tr-bg)" />
 
-      {/* Watermark Bản đồ Tri thức & Kinh tuyến mờ ở trung tâm */}
-      <g opacity="0.065" stroke="#1e3a8a" strokeWidth="1.5" fill="none">
-        <ellipse cx="960" cy="540" rx="520" ry="260" />
-        <ellipse cx="960" cy="540" rx="390" ry="260" />
-        <ellipse cx="960" cy="540" rx="240" ry="260" />
-        <ellipse cx="960" cy="540" rx="95" ry="260" />
-        <line x1="440" y1="540" x2="1480" y2="540" />
-        <line x1="480" y1="450" x2="1440" y2="450" />
-        <line x1="480" y1="630" x2="1440" y2="630" />
-        <line x1="960" y1="280" x2="960" y2="800" />
+      {/* Hào quang vàng kim tỏa sáng phía sau khung ảnh trung tâm */}
+      <circle cx="960" cy="515" r="420" fill="url(#tr-center-halo)" />
+      <g transform="translate(960, 515)" opacity="0.16">
+        {rayAngles.map((deg) => (
+          <polygon
+            key={deg}
+            points="0,0 -14,-390 14,-390"
+            fill="url(#tr-gold)"
+            transform={`rotate(${deg})`}
+          />
+        ))}
       </g>
-      <g opacity="0.055" fill="#1e3a8a">
-        <path d="M520,420 Q580,370 650,410 T740,460 Q710,540 650,560 T540,490 Z" />
-        <path d="M640,580 Q690,570 720,630 T690,740 Q640,720 630,650 Z" />
-        <path d="M890,370 Q1020,340 1160,380 T1360,440 Q1390,520 1310,560 T1120,540 Q1010,570 930,520 T890,370 Z" />
-        <path d="M920,550 Q990,540 1030,610 T980,720 Q920,690 910,610 Z" />
-        <path d="M1260,620 Q1340,600 1390,650 T1350,730 Q1280,720 1260,620 Z" />
+
+      {/* Vòng tròn hoa văn kỷ hà & la bàn tri thức bao quanh tâm điểm (lấp khoảng trống 2 bên) */}
+      <g transform="translate(960, 515)" opacity="0.22" stroke="url(#tr-gold)" fill="none">
+        <circle cx="0" cy="0" r="295" strokeWidth="2" strokeDasharray="6 6" />
+        <circle cx="0" cy="0" r="345" strokeWidth="1.5" />
+        <circle cx="0" cy="0" r="395" strokeWidth="1.2" strokeDasharray="12 8" />
+      </g>
+
+      {/* Watermark Bản đồ Tri thức & Kinh tuyến ở trung tâm */}
+      <g opacity="0.075" stroke="#1e3a8a" strokeWidth="1.6" fill="none">
+        <ellipse cx="960" cy="525" rx="620" ry="290" />
+        <ellipse cx="960" cy="525" rx="460" ry="290" />
+        <ellipse cx="960" cy="525" rx="280" ry="290" />
+        <ellipse cx="960" cy="525" rx="110" ry="290" />
+        <line x1="340" y1="525" x2="1580" y2="525" />
+        <line x1="390" y1="420" x2="1530" y2="420" />
+        <line x1="390" y1="630" x2="1530" y2="630" />
+      </g>
+      <g opacity="0.065" fill="#1e3a8a">
+        <path d="M430,400 Q510,340 595,390 T700,450 Q665,540 590,565 T455,485 Z" />
+        <path d="M570,580 Q630,570 665,640 T630,760 Q570,735 555,655 Z" />
+        <path d="M880,350 Q1040,315 1210,360 T1450,430 Q1485,525 1390,570 T1160,550 Q1030,585 930,525 T880,350 Z" />
+        <path d="M1330,610 Q1430,585 1490,645 T1440,740 Q1355,730 1330,610 Z" />
+      </g>
+
+      {/* Họa tiết cánh chim Lạc & Hoa văn đối xứng hai bên khung ảnh (X=470 và X=1450) giúp bố cục đầy đặn */}
+      <g transform="translate(485, 515)" opacity="0.55">
+        <path
+          d="M60,-150 C-15,-120 -65,-65 -65,0 C-65,65 -15,120 60,150 C10,105 -22,55 -22,0 C-22,-55 10,-105 60,-150 Z"
+          fill="url(#tr-gold)"
+        />
+        <path
+          d="M25,-195 C-65,-150 -120,-80 -120,0 C-120,80 -65,150 25,195 C-35,140 -78,75 -78,0 C-78,-75 -35,-140 25,-195 Z"
+          fill="url(#tr-gold)"
+          opacity="0.65"
+        />
+        <circle cx="-145" cy="0" r="8" fill="url(#tr-gold)" />
+        <polygon points="-145,-28 -140,-6 -118,0 -140,6 -145,28 -150,6 -172,0 -150,-6" fill="url(#tr-gold)" />
+      </g>
+      <g transform="translate(1435, 515) scale(-1, 1)" opacity="0.55">
+        <path
+          d="M60,-150 C-15,-120 -65,-65 -65,0 C-65,65 -15,120 60,150 C10,105 -22,55 -22,0 C-22,-55 10,-105 60,-150 Z"
+          fill="url(#tr-gold)"
+        />
+        <path
+          d="M25,-195 C-65,-150 -120,-80 -120,0 C-120,80 -65,150 25,195 C-35,140 -78,75 -78,0 C-78,-75 -35,-140 25,-195 Z"
+          fill="url(#tr-gold)"
+          opacity="0.65"
+        />
+        <circle cx="-145" cy="0" r="8" fill="url(#tr-gold)" />
+        <polygon points="-145,-28 -140,-6 -118,0 -140,6 -145,28 -150,6 -172,0 -150,-6" fill="url(#tr-gold)" />
       </g>
 
       {/* Khung viền vàng kim kép bên trong */}
@@ -133,11 +187,11 @@ const TeacherRoyalBackdrop = () => {
 
       {/* Hoa văn góc cổ điển Phải-Trên */}
       <g transform="translate(1862, 46)" fill="url(#tr-gold)">
-        <path d="M0,0 L-130,0 L-130,6 L-28,6 L-6,28 L-6,130 L0,130 Z" />
-        <path d="M-16,16 C-55,16 -75,35 -95,65 C-65,52 -45,52 -22,74 C-16,50 -16,35 -16,16 Z" opacity="0.9" />
-        <circle cx="-48" cy="48" r="6" />
-        <circle cx="-82" cy="22" r="4" />
-        <circle cx="-22" cy="82" r="4" />
+        <path d="M0,0 L-150,0 L-150,7 L-32,7 L-7,32 L-7,150 L0,150 Z" />
+        <path d="M-18,18 C-65,18 -88,42 -110,75 C-75,60 -52,60 -26,86 C-18,58 -18,40 -18,18 Z" opacity="0.9" />
+        <circle cx="-54" cy="54" r="7" />
+        <circle cx="-94" cy="24" r="4.5" />
+        <circle cx="-24" cy="94" r="4.5" />
       </g>
 
       {/* DẢI LỤA XANH HOÀNG GIA & VÀNG KIM BÊN TRÁI + GÓC TRÁI DƯỚI */}
@@ -164,30 +218,28 @@ const TeacherRoyalBackdrop = () => {
       />
 
       {/* DẢI LỤA XANH HOÀNG GIA & VÀNG KIM GÓC PHẢI DƯỚI */}
-      <path d="M1920,560 C1820,780 1610,965 1190,1080 L1920,1080 Z" fill="url(#tr-navy-deep)" />
-      <path d="M1920,665 C1810,850 1635,985 1310,1080 L1920,1080 Z" fill="url(#tr-navy-mid)" opacity="0.9" />
+      <path d="M1920,540 C1810,770 1595,960 1180,1080 L1920,1080 Z" fill="url(#tr-navy-deep)" />
+      <path d="M1920,650 C1805,845 1625,982 1300,1080 L1920,1080 Z" fill="url(#tr-navy-mid)" opacity="0.9" />
       <path
-        d="M1920,560 C1820,780 1610,965 1190,1080 L1225,1080 C1630,968 1832,790 1920,588 Z"
+        d="M1920,540 C1810,770 1595,960 1180,1080 L1215,1080 C1615,965 1825,782 1920,568 Z"
         fill="url(#tr-gold)"
       />
       <path
-        d="M1920,665 C1810,850 1635,985 1310,1080"
+        d="M1920,650 C1805,845 1625,982 1300,1080"
         fill="none"
         stroke="url(#tr-gold)"
         strokeWidth="6"
       />
 
-      {/* HUY HIỆU ROSETTE XANH LAM - VÀNG KIM BÊN TRÁI (Tọa độ 136, 330) */}
-      <g transform="translate(136, 330)">
-        {/* Đuôi ruy băng đôi */}
+      {/* HUY HIỆU ROSETTE XANH LAM - VÀNG KIM BÊN TRÁI (Tọa độ 138, 335) */}
+      <g transform="translate(138, 335)">
         <path d="M-24,70 L-68,215 L-28,195 L-4,225 L12,80 Z" fill="url(#tr-navy-mid)" stroke="url(#tr-gold)" strokeWidth="4" />
         <path d="M24,70 L72,210 L32,192 L10,222 L-8,80 Z" fill="url(#tr-navy-deep)" stroke="url(#tr-gold)" strokeWidth="4" />
-        {/* Vòng răng cưa vàng kim */}
         {rosetteAngles.map((deg, idx) => (
           <ellipse
             key={idx}
             cx="0"
-            cy="-92"
+            cy="-94"
             rx="13"
             ry="24"
             fill="url(#tr-gold)"
@@ -196,32 +248,29 @@ const TeacherRoyalBackdrop = () => {
             transform={`rotate(${deg})`}
           />
         ))}
-        <circle cx="0" cy="0" r="84" fill="url(#tr-gold)" />
-        <circle cx="0" cy="0" r="74" fill="url(#tr-navy-mid)" stroke="#fef08a" strokeWidth="2.5" />
+        <circle cx="0" cy="0" r="86" fill="url(#tr-gold)" />
+        <circle cx="0" cy="0" r="75" fill="url(#tr-navy-mid)" stroke="#fef08a" strokeWidth="2.5" />
         <circle cx="0" cy="0" r="64" fill="none" stroke="url(#tr-gold)" strokeWidth="1.5" strokeDasharray="4 4" />
-        {/* Ngôi sao 8 cánh trung tâm huy hiệu */}
         <polygon
-          points="0,-38 9,-11 38,-11 15,6 24,34 0,17 -24,34 -15,6 -38,-11 -9,-11"
+          points="0,-40 10,-12 40,-12 16,6 25,35 0,18 -25,35 -16,6 -40,-12 -10,-12"
           fill="url(#tr-gold)"
           opacity="0.95"
         />
       </g>
 
       {/* CỤM HOA BẠCH TRÀ & LÁ VÀNG GÓC TRÁI DƯỚI */}
-      <g transform="translate(138, 920)">
-        {/* Lá vàng */}
+      <g transform="translate(142, 915)">
         <path d="M-90,-45 Q-135,-125 -55,-165 Q-15,-105 -55,-35 Z" fill="url(#tr-gold)" stroke="#784c0c" strokeWidth="1.5" />
         <path d="M-30,-80 Q-40,-175 35,-190 Q45,-115 -10,-65 Z" fill="url(#tr-gold)" stroke="#784c0c" strokeWidth="1.5" />
         <path d="M65,25 Q155,-15 185,55 Q110,95 55,45 Z" fill="url(#tr-gold)" stroke="#784c0c" strokeWidth="1.5" />
         <path d="M25,75 Q115,75 145,135 Q70,155 15,95 Z" fill="url(#tr-gold)" stroke="#784c0c" strokeWidth="1.5" />
-        {/* Cánh hoa 3D */}
         {Array.from({ length: 10 }, (_, i) => i * 36).map((deg, idx) => (
           <ellipse
             key={idx}
             cx="0"
-            cy="-46"
-            rx="26"
-            ry="48"
+            cy="-48"
+            rx="27"
+            ry="50"
             fill="url(#tr-flower-petal)"
             stroke="#cbbba0"
             strokeWidth="1"
@@ -232,21 +281,21 @@ const TeacherRoyalBackdrop = () => {
           <ellipse
             key={idx}
             cx="0"
-            cy="-30"
-            rx="19"
-            ry="34"
+            cy="-31"
+            rx="20"
+            ry="35"
             fill="url(#tr-flower-petal)"
             stroke="#d6cbb5"
             strokeWidth="1"
             transform={`rotate(${deg})`}
           />
         ))}
-        <circle cx="0" cy="0" r="20" fill="url(#tr-gold)" />
+        <circle cx="0" cy="0" r="21" fill="url(#tr-gold)" />
         <circle cx="0" cy="0" r="11" fill="#92400e" />
       </g>
 
       {/* CỤM HOA BẠCH TRÀ & LÁ VÀNG GÓC PHẢI DƯỚI */}
-      <g transform="translate(1782, 920) scale(-1, 1)">
+      <g transform="translate(1778, 915) scale(-1, 1)">
         <path d="M-90,-45 Q-135,-125 -55,-165 Q-15,-105 -55,-35 Z" fill="url(#tr-gold)" stroke="#784c0c" strokeWidth="1.5" />
         <path d="M-30,-80 Q-40,-175 35,-190 Q45,-115 -10,-65 Z" fill="url(#tr-gold)" stroke="#784c0c" strokeWidth="1.5" />
         <path d="M65,25 Q155,-15 185,55 Q110,95 55,45 Z" fill="url(#tr-gold)" stroke="#784c0c" strokeWidth="1.5" />
@@ -255,9 +304,9 @@ const TeacherRoyalBackdrop = () => {
           <ellipse
             key={idx}
             cx="0"
-            cy="-46"
-            rx="26"
-            ry="48"
+            cy="-48"
+            rx="27"
+            ry="50"
             fill="url(#tr-flower-petal)"
             stroke="#cbbba0"
             strokeWidth="1"
@@ -268,22 +317,21 @@ const TeacherRoyalBackdrop = () => {
           <ellipse
             key={idx}
             cx="0"
-            cy="-30"
-            rx="19"
-            ry="34"
+            cy="-31"
+            rx="20"
+            ry="35"
             fill="url(#tr-flower-petal)"
             stroke="#d6cbb5"
             strokeWidth="1"
             transform={`rotate(${deg})`}
           />
         ))}
-        <circle cx="0" cy="0" r="20" fill="url(#tr-gold)" />
+        <circle cx="0" cy="0" r="21" fill="url(#tr-gold)" />
         <circle cx="0" cy="0" r="11" fill="#92400e" />
       </g>
 
       {/* BIỂU TƯỢNG CUỐN SÁCH VÀNG TRI THỨC & HOA VĂN ĐỐI XỨNG Ở ĐÁY TRUNG TÂM */}
-      <g transform="translate(960, 1022)">
-        {/* Hoa văn uốn lượn 2 bên cuốn sách */}
+      <g transform="translate(960, 1026)">
         <path
           d="M-125,6 C-165,6 -195,-18 -170,-34 C-150,-45 -132,-20 -152,-12 C-185,2 -225,12 -275,8"
           fill="none"
@@ -298,12 +346,11 @@ const TeacherRoyalBackdrop = () => {
           strokeWidth="3.5"
           strokeLinecap="round"
         />
-        {/* Trang sách mở */}
         <path d="M0,8 Q-55,-14 -115,0 L-102,-32 Q-48,-44 0,-20 Z" fill="url(#tr-gold)" stroke="#92400e" strokeWidth="1.2" />
         <path d="M0,8 Q55,-14 115,0 L102,-32 Q48,-44 0,-20 Z" fill="url(#tr-gold)" stroke="#92400e" strokeWidth="1.2" />
         <path d="M0,-20 Q-45,-48 -95,-36 L-86,-52 Q-42,-62 0,-34 Z" fill="#fef08a" stroke="#b48327" strokeWidth="1" />
         <path d="M0,-20 Q45,-48 95,-36 L86,-52 Q42,-62 0,-34 Z" fill="#fef08a" stroke="#b48327" strokeWidth="1" />
-        <line x1="-380" y1="14" x2="380" y2="14" stroke="url(#tr-gold-horiz)" strokeWidth="2.5" />
+        <line x1="-420" y1="12" x2="420" y2="12" stroke="url(#tr-gold-horiz)" strokeWidth="2.5" />
       </g>
 
       {/* Đốm sáng lấp lánh trên viền vàng */}
@@ -326,8 +373,8 @@ const TeacherRoyalBackdrop = () => {
 // Nhánh bông lúa vàng hai bên chữ VINH DANH
 const SideWheatBranch = ({ flip = false }) => (
   <svg
-    width="105"
-    height="96"
+    width="115"
+    height="92"
     viewBox="0 0 105 96"
     className="overflow-visible"
     style={{ transform: flip ? "scaleX(-1)" : undefined }}
@@ -339,7 +386,7 @@ const SideWheatBranch = ({ flip = false }) => (
         <stop offset="100%" stopColor="#92400e" />
       </linearGradient>
     </defs>
-    <path d="M92,86 C52,74 26,46 18,8" fill="none" stroke="url(#wheat-gold)" strokeWidth="3.2" strokeLinecap="round" />
+    <path d="M92,86 C52,74 26,46 18,8" fill="none" stroke="url(#wheat-gold)" strokeWidth="3.4" strokeLinecap="round" />
     {[
       [78, 80, -25],
       [62, 70, -35],
@@ -349,22 +396,22 @@ const SideWheatBranch = ({ flip = false }) => (
       [20, 12, -75],
     ].map(([x, y, rot], idx) => (
       <g key={idx} transform={`translate(${x}, ${y}) rotate(${rot})`}>
-        <ellipse cx="-10" cy="-6" rx="11" ry="5" fill="url(#wheat-gold)" />
-        <ellipse cx="8" cy="6" rx="11" ry="5" fill="url(#wheat-gold)" />
+        <ellipse cx="-10" cy="-6" rx="11.5" ry="5.2" fill="url(#wheat-gold)" />
+        <ellipse cx="8" cy="6" rx="11.5" ry="5.2" fill="url(#wheat-gold)" />
       </g>
     ))}
   </svg>
 );
 
-// Vòng Nguyệt Quế Kép & Dải Ruy-băng Vàng Ôm Khung Ảnh Tròn Trung Tâm Giáo Viên
+// Vòng Nguyệt Quế Kép & Dải Ruy-băng Vàng Ôm Khung Ảnh Tròn Lớn Trung Tâm Giáo Viên
 const TeacherCenterWreath = () => {
-  const leftAngles = Array.from({ length: 13 }, (_, i) => 162 + i * 7.2);
-  const rightAngles = Array.from({ length: 13 }, (_, i) => 18 - i * 7.2);
+  const leftAngles = Array.from({ length: 15 }, (_, i) => 160 + i * 6.4);
+  const rightAngles = Array.from({ length: 15 }, (_, i) => 20 - i * 6.4);
 
   return (
     <svg
-      viewBox="0 0 540 480"
-      className="absolute inset-0 w-full h-full pointer-events-none z-20 overflow-visible drop-shadow-xl"
+      viewBox="0 0 620 520"
+      className="absolute inset-0 w-full h-full pointer-events-none z-20 overflow-visible drop-shadow-2xl"
     >
       <defs>
         <linearGradient id="tcw-gold" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -383,50 +430,50 @@ const TeacherCenterWreath = () => {
         </linearGradient>
       </defs>
 
-      {/* Nhánh nguyệt quế trái */}
+      {/* Nhánh nguyệt quế trái ôm khung tròn lớn */}
       {leftAngles.map((deg, idx) => {
         const rad = (deg * Math.PI) / 180;
-        const cx = 270 + 206 * Math.cos(rad);
-        const cy = 225 - 206 * Math.sin(rad);
+        const cx = 310 + 240 * Math.cos(rad);
+        const cy = 248 - 240 * Math.sin(rad);
         return (
           <g key={`l-${idx}`} transform={`translate(${cx}, ${cy}) rotate(${90 - deg})`}>
-            <path d="M0,0 C-12,-14 -10,-32 0,-42 C10,-32 12,-14 0,0 Z" fill="url(#tcw-gold)" transform="rotate(-26)" />
-            <path d="M0,0 C-10,-12 -8,-28 0,-36 C8,-28 10,-12 0,0 Z" fill="url(#tcw-gold)" transform="translate(12, 4) rotate(24)" />
+            <path d="M0,0 C-14,-16 -12,-38 0,-50 C12,-38 14,-16 0,0 Z" fill="url(#tcw-gold)" transform="rotate(-28)" />
+            <path d="M0,0 C-12,-14 -10,-32 0,-42 C10,-32 12,-14 0,0 Z" fill="url(#tcw-gold)" transform="translate(14, 4) rotate(24)" />
           </g>
         );
       })}
 
-      {/* Nhánh nguyệt quế phải */}
+      {/* Nhánh nguyệt quế phải ôm khung tròn lớn */}
       {rightAngles.map((deg, idx) => {
         const rad = (deg * Math.PI) / 180;
-        const cx = 270 + 206 * Math.cos(rad);
-        const cy = 225 - 206 * Math.sin(rad);
+        const cx = 310 + 240 * Math.cos(rad);
+        const cy = 248 - 240 * Math.sin(rad);
         return (
           <g key={`r-${idx}`} transform={`translate(${cx}, ${cy}) rotate(${-90 - deg})`}>
-            <path d="M0,0 C-12,-14 -10,-32 0,-42 C10,-32 12,-14 0,0 Z" fill="url(#tcw-gold)" transform="rotate(26)" />
-            <path d="M0,0 C-10,-12 -8,-28 0,-36 C8,-28 10,-12 0,0 Z" fill="url(#tcw-gold)" transform="translate(-12, 4) rotate(-24)" />
+            <path d="M0,0 C-14,-16 -12,-38 0,-50 C12,-38 14,-16 0,0 Z" fill="url(#tcw-gold)" transform="rotate(28)" />
+            <path d="M0,0 C-12,-14 -10,-32 0,-42 C10,-32 12,-14 0,0 Z" fill="url(#tcw-gold)" transform="translate(-14, 4) rotate(-24)" />
           </g>
         );
       })}
 
-      {/* Dải ruy-băng vàng kim uốn lượn phía dưới khung ảnh */}
+      {/* Dải ruy-băng vàng kim uốn vòm lên ở giữa (tạo vòm trang trọng ngay trên chữ CÔ GIÁO / THẦY GIÁO) */}
       <path
-        d="M55,392 L128,372 L136,418 L68,434 L88,408 Z"
+        d="M52,462 L138,432 L148,482 L68,502 L88,472 Z"
         fill="url(#tcw-ribbon)"
         stroke="#78350f"
-        strokeWidth="1.2"
+        strokeWidth="1.4"
       />
       <path
-        d="M485,392 L412,372 L404,418 L472,434 L452,408 Z"
+        d="M568,462 L482,432 L472,482 L552,502 L532,472 Z"
         fill="url(#tcw-ribbon)"
         stroke="#78350f"
-        strokeWidth="1.2"
+        strokeWidth="1.4"
       />
       <path
-        d="M112,366 Q270,418 428,366 L416,414 Q270,462 124,414 Z"
+        d="M118,452 Q310,398 502,452 L490,496 Q310,442 130,496 Z"
         fill="url(#tcw-ribbon)"
         stroke="#fef08a"
-        strokeWidth="2"
+        strokeWidth="2.4"
       />
     </svg>
   );
@@ -446,7 +493,6 @@ function parseTeacherDisplay(certData) {
     cleanName = rawName.replace(/^thầy\s+/i, "").trim();
   }
 
-  // Trích xuất tên môn và chuỗi giải từ certData.prize (VD: "ĐẠT: 1 GIẢI NHÌ, 1 GIẢI BA — MÔN CÔNG NGHỆ CN")
   const rawPrize = String(certData.prize || "").trim();
   let subjectName = "";
   let achievementPart = rawPrize;
@@ -457,12 +503,11 @@ function parseTeacherDisplay(certData) {
     achievementPart = dashMatch[0].replace(/^ĐẠT:\s*/i, "").trim();
   }
 
-  // Đổi chữ viết tắt "GIẢI KK" thành "GIẢI KHUYẾN KHÍCH" cho trang trọng
   achievementPart = achievementPart.replace(/GIẢI\s+KK\b/gi, "GIẢI KHUYẾN KHÍCH");
 
   const subjectLine = subjectName ? `GIẢNG DẠY MÔN ${subjectName.toUpperCase()}` : certData.role.toUpperCase();
   const teamLine = subjectName
-    ? `ĐỘI TUYỂN MÔN ${subjectName.toUpperCase()} - ${achievementPart.toUpperCase()}`
+    ? `ĐỘI TUYỂN MÔN ${subjectName.toUpperCase()} — ${achievementPart.toUpperCase()}`
     : rawPrize.toUpperCase();
 
   return {
@@ -640,14 +685,14 @@ export const CertificateCanvas = ({
           <TeacherRoyalBackdrop />
 
           {/* Logo 60 năm THPT Chí Linh đặt trang trọng bên trái cụm tiêu đề */}
-          <div className="absolute left-[340px] top-[46px] z-30">
-            <ChiLinh60YearsLogo customLogo={customLogo} size={146} />
+          <div className="absolute left-[325px] top-[40px] z-30">
+            <ChiLinh60YearsLogo customLogo={customLogo} size={156} />
           </div>
 
-          <div className="relative z-20 w-full h-full flex flex-col items-center pt-[42px] pb-[64px] px-28 text-center">
+          <div className="relative z-20 w-full h-full flex flex-col items-center pt-[32px] pb-[52px] px-24 text-center">
             {/* Tên trường + Chữ VINH DANH kẹp giữa đôi bông lúa vàng */}
             <div
-              className="font-cinzel font-black text-[44px] uppercase tracking-wider leading-none"
+              className="font-cinzel font-black text-[46px] uppercase tracking-wider leading-none"
               style={{
                 color: "#0a2259",
                 textShadow: "0 2px 0 #ffffff, 0 4px 12px rgba(10,34,89,0.18)",
@@ -659,8 +704,8 @@ export const CertificateCanvas = ({
             <div className="flex items-center justify-center gap-2 -mt-1">
               <SideWheatBranch />
               <LuxuryGoldTitle
-                width={580}
-                height={96}
+                width={600}
+                height={92}
                 fontSize={86}
                 fontFamily={titleFont}
                 letterSpacing={titleSpacing}
@@ -669,14 +714,14 @@ export const CertificateCanvas = ({
             </div>
 
             {/* Đường hoa văn kim cương dưới chữ VINH DANH */}
-            <div className="flex items-center justify-center gap-3 -mt-2 mb-2">
-              <span className="w-52 h-[2px] bg-gradient-to-r from-transparent via-amber-500 to-amber-700" />
+            <div className="flex items-center justify-center gap-3 -mt-2 mb-1.5">
+              <span className="w-56 h-[2.5px] bg-gradient-to-r from-transparent via-amber-500 to-amber-700" />
               <span className="text-amber-600 text-xl leading-none">❖</span>
-              <span className="w-52 h-[2px] bg-gradient-to-l from-transparent via-amber-500 to-amber-700" />
+              <span className="w-56 h-[2.5px] bg-gradient-to-l from-transparent via-amber-500 to-amber-700" />
             </div>
 
             {/* Tiêu đề sự kiện bồi dưỡng HSG */}
-            <div className="max-w-[1380px] mb-1">
+            <div className="max-w-[1440px] mb-0.5">
               {String(certData.event || "")
                 .split("\n")
                 .filter(Boolean)
@@ -685,10 +730,10 @@ export const CertificateCanvas = ({
                     key={idx}
                     className="font-main uppercase font-black"
                     style={{
-                      fontSize: idx === 0 ? 30 : idx === 1 ? 28 : 24,
-                      color: idx === 2 ? "#153e96" : "#081b4b",
-                      letterSpacing: idx === 2 ? "0.06em" : "0.02em",
-                      lineHeight: 1.32,
+                      fontSize: idx === 0 ? 32 : idx === 1 ? 26 : 24,
+                      color: idx === 0 ? "#081b4b" : "#153e96",
+                      letterSpacing: idx === 0 ? "0.02em" : "0.08em",
+                      lineHeight: 1.28,
                     }}
                   >
                     {line}
@@ -696,53 +741,64 @@ export const CertificateCanvas = ({
                 ))}
             </div>
 
-            {/* Khung ảnh tròn trung tâm + Vòng nguyệt quế kép & Ruy-băng vàng */}
-            <div className="relative w-[490px] h-[425px] flex items-center justify-center -mt-1">
+            {/* Khung ảnh tròn trung tâm CỠ LỚN (440px) + Vòng nguyệt quế kép & Ruy-băng vòm vàng */}
+            <div className="relative w-[600px] h-[476px] flex items-center justify-center -mt-2">
               <div className="-mt-4">
-                <SmartPhotoFrame {...frameProps} shape="circle" size={366} beaded />
+                <SmartPhotoFrame {...frameProps} shape="circle" size={440} beaded />
               </div>
               <TeacherCenterWreath />
             </div>
 
-            {/* Danh xưng + Họ tên Giáo viên + Môn giảng dạy + Thành tích đội tuyển */}
-            <div className="-mt-3 flex flex-col items-center">
+            {/* Danh xưng + Họ tên Giáo viên CỠ LỚN + Môn giảng dạy + Bảng thành tích đội tuyển */}
+            <div className="-mt-6 flex flex-col items-center z-30">
               <div
-                className="font-main font-black text-[28px] uppercase tracking-widest"
-                style={{ color: "#0a2259" }}
+                className="font-main font-black text-[33px] uppercase tracking-widest leading-tight"
+                style={{
+                  color: "#0a2259",
+                  textShadow: "0 2px 0 #ffffff",
+                }}
               >
                 {teacherInfo.honorific}
               </div>
 
               <div
-                className="font-playfair font-black uppercase tracking-wide leading-tight px-6"
+                className="font-playfair font-black uppercase tracking-wide leading-tight px-6 mt-0.5"
                 style={{
-                  fontSize: Math.min(58, Math.max(40, Math.round(980 / Math.max(10, teacherInfo.displayName.length * 0.62)))) * nameScale,
+                  fontSize:
+                    Math.min(68, Math.max(48, Math.round(1120 / Math.max(10, teacherInfo.displayName.length * 0.58)))) *
+                    nameScale,
                   color: "#092058",
-                  textShadow: "0 2px 0 #ffffff, 0 4px 10px rgba(9,32,88,0.18)",
+                  textShadow: "0 2.5px 0 #ffffff, 0 5px 14px rgba(9,32,88,0.22)",
                 }}
               >
                 {teacherInfo.displayName}
               </div>
 
               {/* Hoa văn ngăn cách dưới tên giáo viên */}
-              <div className="flex items-center justify-center gap-3 my-1.5">
-                <span className="w-36 h-[2px] bg-gradient-to-r from-transparent to-amber-500" />
-                <span className="text-amber-500 text-lg leading-none">✦ ❖ ✦</span>
-                <span className="w-36 h-[2px] bg-gradient-to-l from-transparent to-amber-500" />
+              <div className="flex items-center justify-center gap-3 my-1">
+                <span className="w-44 h-[2.5px] bg-gradient-to-r from-transparent to-amber-500" />
+                <span className="text-amber-500 text-xl leading-none">✦ ❖ ✦</span>
+                <span className="w-44 h-[2.5px] bg-gradient-to-l from-transparent to-amber-500" />
               </div>
 
               <div
-                className="font-main font-extrabold text-[25px] uppercase tracking-wider"
+                className="font-main font-black text-[30px] uppercase tracking-wider leading-tight"
                 style={{ color: "#0f172a" }}
               >
                 {teacherInfo.subjectLine}
               </div>
 
               <div
-                className="font-main font-extrabold text-[24px] uppercase tracking-wide mt-0.5"
-                style={{ color: "#0f172a" }}
+                className="mt-2 px-10 py-1.5 rounded-full border-2 border-amber-400/90 shadow-lg flex items-center gap-3"
+                style={{
+                  background: "linear-gradient(90deg, #061539 0%, #0f3485 50%, #061539 100%)",
+                }}
               >
-                {teacherInfo.teamLine}
+                <span className="text-amber-300 text-2xl">★</span>
+                <span className="font-main font-extrabold text-[26px] uppercase tracking-wider text-amber-100">
+                  {teacherInfo.teamLine}
+                </span>
+                <span className="text-amber-300 text-2xl">★</span>
               </div>
             </div>
           </div>
