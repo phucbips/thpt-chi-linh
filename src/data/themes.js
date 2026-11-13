@@ -157,13 +157,23 @@ export const SUBJECT_THEMES = {
   },
 };
 
+// factor: hệ số co chữ riêng cho từng phông (phông rộng như Playwrite/Pacifico cần nhỏ hơn)
 export const FONT_OPTIONS = [
-  { id: "font-script-alex", label: "Alex Brush (Chữ ký mảnh)" },
-  { id: "font-script-vibes", label: "Great Vibes (Hoàng gia)" },
-  { id: "font-script-charm", label: "Charm (Thư pháp mềm mại)" },
-  { id: "font-script-dancing", label: "Dancing Script (Rõ nét)" },
-  { id: "font-script-playwrite", label: "Playwrite VN (Chữ viết Việt Nam)" },
-  { id: "font-script-pacifico", label: "Pacifico (Nét cọ đậm)" },
-  { id: "font-serif-cormorant", label: "Cormorant Italic (Cổ điển quý phái)" },
-  { id: "font-serif-title", label: "Playfair Display (Chữ in trang trọng)" },
+  { id: "font-script-alex", label: "Alex Brush (Chữ ký mảnh)", factor: 1.08 },
+  { id: "font-script-vibes", label: "Great Vibes (Hoàng gia)", factor: 1.05 },
+  { id: "font-script-charm", label: "Charm (Thư pháp mềm mại)", factor: 0.9 },
+  { id: "font-script-dancing", label: "Dancing Script (Rõ nét)", factor: 0.95 },
+  { id: "font-script-playwrite", label: "Playwrite VN (Chữ viết Việt Nam)", factor: 0.66 },
+  { id: "font-script-pacifico", label: "Pacifico (Nét cọ đậm)", factor: 0.78 },
+  { id: "font-serif-cormorant", label: "Cormorant Italic (Cổ điển quý phái)", factor: 1.0 },
+  { id: "font-serif-title", label: "Playfair Display (Chữ in trang trọng)", factor: 0.82 },
+];
+
+// Phông cho chữ "VINH DANH" (vẽ bằng SVG nên xuất PNG luôn giống 100%)
+export const TITLE_FONT_OPTIONS = [
+  { id: "'Cinzel', serif", label: "Cinzel (La Mã cổ điển)", spacing: 8 },
+  { id: "'Playfair Display', serif", label: "Playfair Display (Thanh lịch)", spacing: 6 },
+  { id: "'Cormorant Garamond', serif", label: "Cormorant (Quý tộc mảnh)", spacing: 10 },
+  { id: "'Montserrat', sans-serif", label: "Montserrat (Hiện đại khỏe khoắn)", spacing: 10 },
+  { id: "'Be Vietnam Pro', sans-serif", label: "Be Vietnam Pro (Hiện đại Việt)", spacing: 8 },
 ];

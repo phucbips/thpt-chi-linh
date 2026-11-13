@@ -28,7 +28,7 @@ import {
   summarizePrizesBySubject,
   toVietnameseTitleCase,
 } from "./data/studentsData";
-import { FONT_OPTIONS, SUBJECT_THEMES } from "./data/themes";
+import { FONT_OPTIONS, SUBJECT_THEMES, TITLE_FONT_OPTIONS } from "./data/themes";
 import { CertificateCanvas } from "./components/CertificateCanvas";
 import { ChiLinh60YearsLogo } from "./components/SvgArtwork";
 
@@ -64,6 +64,16 @@ export default function App() {
   // Pan & Zoom ảnh chân dung
   const [photoZoom, setPhotoZoom] = useState(1);
   const [photoPan, setPhotoPan] = useState({ x: 0, y: 0 });
+
+  // Chế độ căn chỉnh ảnh trong khung (kiểu Canva) + bộ nhớ căn chỉnh riêng cho từng người
+  const [isCropMode, setIsCropMode] = useState(false);
+  const cropMapRef = useRef({});
+  const currentKeyRef = useRef(`hs-${INITIAL_STUDENTS[5].id}`);
+  const [libraryUploads, setLibraryUploads] = useState([]);
+
+  // Tinh chỉnh chữ
+  const [titleFont, setTitleFont] = useState(TITLE_FONT_OPTIONS[0].id);
+  const [nameScale, setNameScale] = useState(1);
   const dragRef = useRef({ active: false, startX: 0, startY: 0, origX: 0, origY: 0 });
 
   const [isExporting, setIsExporting] = useState(false);
@@ -100,8 +110,18 @@ export default function App() {
     photo: initialStudent.photo || DEFAULT_STUDENT_PHOTO,
   });
 
+  // Nạp lại vị trí căn chỉnh ảnh đã lưu cho từng người
+  const loadCropFor = (key) => {
+    currentKeyRef.current = key;
+    const saved = cropMapRef.current[key];
+    setPhotoZoom(saved ? saved.zoom : 1);
+    setPhotoPan(saved ? saved.pan : { x: 0, y: 0 });
+    setIsCropMode(false);
+  };
+
   const selectStudent = (student) => {
     setSelectedStudentId(student.id);
+    loadCropFor(`hs-${student.id}`);
     if (layoutMode === "teacher") setLayoutMode("ribbon");
     setCertData((prev) => ({
       ...prev,
@@ -119,6 +139,7 @@ export default function App() {
     const teacherName = TEACHERS_BY_SUBJECT[subj] || `Giáo viên môn ${subj}`;
     const summary = summarizePrizesBySubject(students, subj);
     setSelectedStudentId(null);
+    loadCropFor(`gv-${subj}`);
     setLayoutMode("teacher");
     setCertData((prev) => ({
       ...prev,
@@ -153,8 +174,19 @@ export default function App() {
     selectStudent(filteredStudents[nextIdx]);
   };
 
-  // Xử lý kéo thả tâm ảnh
-  const handlePhotoPointerDown = (e) => {
+  // ===================== KHUNG ẢNH KIỂU CANVA =====================
+  // Lưu vị trí căn chỉnh mỗi khi thay đổi
+  useEffect(() => {
+    cropMapRef.current[currentKeyRef.current] = { zoom: photoZoom, pan: photoPan };
+  }, [photoZoom, photoPan]);
+
+  const clampPan = (v, zoom) => {
+    const lim = 120 + 250 * zoom;
+    return Math.max(-lim, Math.min(lim, v));
+  };
+
+  // Bắt đầu kéo ảnh (chỉ khi đang ở chế độ căn chỉnh)
+  const handleStartPan = (e) => {
     e.preventDefault();
     dragRef.current = {
       active: true,
@@ -165,15 +197,30 @@ export default function App() {
     };
   };
 
+  const handleZoomDelta = React.useCallback((d) => {
+    setPhotoZoom((z) => Math.max(0.5, Math.min(3, +(z + d).toFixed(2))));
+  }, []);
+
+  // Thả ảnh vào khung → tự khớp hình khung + lưu cho người đang chọn
+  const applyPhoto = (src) => {
+    setCertData((prev) => ({ ...prev, photo: src }));
+    if (selectedStudentId != null && layoutMode !== "teacher") {
+      setStudents((prev) => prev.map((s) => (s.id === selectedStudentId ? { ...s, photo: src } : s)));
+    }
+    setPhotoZoom(1);
+    setPhotoPan({ x: 0, y: 0 });
+  };
+
   useEffect(() => {
     const onMove = (e) => {
       if (!dragRef.current.active) return;
+      // 1 px trên màn hình = (1/scale) px canvas; khung SVG 560 đơn vị ≈ kích thước khung px
       const dx = (e.clientX - dragRef.current.startX) / previewScale;
       const dy = (e.clientY - dragRef.current.startY) / previewScale;
-      setPhotoPan({
-        x: Math.max(-220, Math.min(220, dragRef.current.origX + dx)),
-        y: Math.max(-220, Math.min(220, dragRef.current.origY + dy)),
-      });
+      setPhotoPan((prev) => ({
+        x: clampPan(dragRef.current.origX + dx, photoZoom),
+        y: clampPan(dragRef.current.origY + dy, photoZoom),
+      }));
     };
     const onUp = () => {
       dragRef.current.active = false;
@@ -184,23 +231,41 @@ export default function App() {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
     };
-  }, [previewScale]);
+  }, [previewScale, photoZoom]);
+
+  // Enter / Esc / click ra ngoài khung → thoát chế độ căn chỉnh
+  useEffect(() => {
+    if (!isCropMode) return;
+    const onKey = (e) => {
+      if (e.key === "Enter" || e.key === "Escape") setIsCropMode(false);
+    };
+    const onDown = (e) => {
+      if (e.target.closest?.("[data-photo-frame]") || e.target.closest?.("[data-crop-toolbar]")) return;
+      setIsCropMode(false);
+    };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("pointerdown", onDown);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("pointerdown", onDown);
+    };
+  }, [isCropMode]);
+
+  const handleLibraryUpload = (e) => {
+    const files = Array.from(e.target.files || []);
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => setLibraryUploads((prev) => [{ src: ev.target.result, label: file.name }, ...prev]);
+      reader.readAsDataURL(file);
+    });
+    e.target.value = "";
+  };
 
   const handlePhotoUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target.result;
-      setCertData((prev) => ({ ...prev, photo: dataUrl }));
-      if (selectedStudentId != null) {
-        setStudents((prev) =>
-          prev.map((s) => (s.id === selectedStudentId ? { ...s, photo: dataUrl } : s))
-        );
-      }
-      setPhotoZoom(1);
-      setPhotoPan({ x: 0, y: 0 });
-    };
+    reader.onload = (ev) => applyPhoto(ev.target.result);
     reader.readAsDataURL(file);
   };
 
@@ -288,7 +353,11 @@ export default function App() {
     const node = document.getElementById("certificate-node");
     if (!node) return;
     setIsExporting(true);
+    setIsCropMode(false);
     try {
+      // Đảm bảo thoát chế độ căn chỉnh và phông chữ đã tải đầy đủ trước khi chụp
+      await new Promise((r) => setTimeout(r, 80));
+      await document.fonts.ready;
       const dataUrl = await toPng(node, {
         width: 1920,
         height: 1080,
@@ -317,11 +386,14 @@ export default function App() {
     const prevCert = { ...certData };
     const prevId = selectedStudentId;
     const prevLayout = layoutMode;
+    const prevKey = currentKeyRef.current;
 
     if (layoutMode === "teacher") setLayoutMode("ribbon");
+    setIsCropMode(false);
     setBatchProgress({ current: 0, total: filteredStudents.length });
 
     try {
+      await document.fonts.ready;
       const zip = new JSZip();
       for (let i = 0; i < filteredStudents.length; i++) {
         const st = filteredStudents[i];
@@ -356,12 +428,29 @@ export default function App() {
       setCertData(prevCert);
       setSelectedStudentId(prevId);
       setLayoutMode(prevLayout);
+      loadCropFor(prevKey);
       setBatchProgress(null);
     }
   };
 
   const currentTheme = SUBJECT_THEMES[certData.subjectKey] || SUBJECT_THEMES["Toán"];
   const subjectList = Object.keys(TEACHERS_BY_SUBJECT);
+  const currentFont = FONT_OPTIONS.find((f) => f.id === scriptFont) || FONT_OPTIONS[0];
+  const currentTitleFont = TITLE_FONT_OPTIONS.find((f) => f.id === titleFont) || TITLE_FONT_OPTIONS[0];
+
+  // Thư viện ảnh: ảnh tải thêm + giáo viên + học sinh (theo bộ lọc)
+  const photoLibrary = useMemo(() => {
+    const list = [...libraryUploads];
+    Object.entries(TEACHER_PHOTOS_BY_SUBJECT).forEach(([subj, src]) => {
+      if (src && src.startsWith("/") && (filterSubject === "ALL" || filterSubject === subj)) {
+        list.push({ src, label: `${TEACHERS_BY_SUBJECT[subj]} (GV ${subj})` });
+      }
+    });
+    filteredStudents.forEach((s) => {
+      if (s.photo) list.push({ src: s.photo, label: toVietnameseTitleCase(s.name) });
+    });
+    return list;
+  }, [libraryUploads, filteredStudents, filterSubject]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-3 md:p-5">
@@ -591,34 +680,74 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Pan / Zoom ảnh */}
-              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 space-y-1.5">
+              {/* THƯ VIỆN ẢNH – kéo thả vào khung như Canva */}
+              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 space-y-2">
                 <div className="flex items-center justify-between text-[11px]">
                   <span className="font-bold text-slate-300 flex items-center gap-1">
-                    <ZoomIn className="w-3.5 h-3.5 text-amber-400" /> Thu phóng ảnh ({photoZoom.toFixed(2)}x)
+                    <ImageIcon className="w-3.5 h-3.5 text-sky-400" /> Thư viện ảnh ({photoLibrary.length})
                   </span>
-                  <button
-                    onClick={() => {
-                      setPhotoZoom(1);
-                      setPhotoPan({ x: 0, y: 0 });
-                    }}
-                    className="text-sky-400 hover:text-sky-300 flex items-center gap-1 font-semibold"
-                  >
-                    <RotateCcw className="w-3 h-3" /> Đặt lại
-                  </button>
+                  <label className="cursor-pointer text-sky-400 hover:text-sky-300 font-semibold flex items-center gap-1">
+                    <Upload className="w-3 h-3" /> Thêm ảnh
+                    <input type="file" accept="image/*" multiple onChange={handleLibraryUpload} className="hidden" />
+                  </label>
                 </div>
-                <input
-                  type="range"
-                  min="0.6"
-                  max="2.2"
-                  step="0.02"
-                  value={photoZoom}
-                  onChange={(e) => setPhotoZoom(parseFloat(e.target.value))}
-                  className="w-full accent-amber-400 cursor-pointer"
-                />
-                <p className="text-[10px] text-slate-500">
-                  Mẹo: Kéo trực tiếp ảnh trên khung xem trước để căn giữa khuôn mặt.
+                <div className="grid grid-cols-6 gap-1.5 max-h-36 overflow-y-auto pr-1">
+                  {photoLibrary.map((p, idx) => (
+                    <img
+                      key={`${p.src.slice(-24)}-${idx}`}
+                      src={p.src}
+                      alt={p.label}
+                      title={`${p.label} — kéo thả vào khung (hoặc bấm để dùng)`}
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData("application/x-vinhdanh-photo", p.src);
+                        e.dataTransfer.setData("text/plain", p.src);
+                        e.dataTransfer.effectAllowed = "copy";
+                      }}
+                      onClick={() => applyPhoto(p.src)}
+                      className={`w-full aspect-square object-cover rounded-lg border-2 cursor-grab active:cursor-grabbing hover:scale-105 transition ${
+                        certData.photo === p.src ? "border-amber-400" : "border-slate-700 hover:border-sky-400"
+                      }`}
+                    />
+                  ))}
+                </div>
+                <p className="text-[10px] text-slate-500 leading-relaxed">
+                  🖱️ <b className="text-slate-300">Kéo thả</b> ảnh (từ đây hoặc từ máy tính) vào khung •{" "}
+                  <b className="text-slate-300">Đúp chuột</b> vào ảnh để căn chỉnh (kéo dịch, lăn chuột phóng to) •{" "}
+                  <b className="text-slate-300">Enter</b> / click ra ngoài để xong.
                 </p>
+              </div>
+
+              {/* TINH CHỈNH CHỮ */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Phông chữ "VINH DANH"</label>
+                  <select
+                    value={titleFont}
+                    onChange={(e) => setTitleFont(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs font-bold text-slate-200"
+                  >
+                    {TITLE_FONT_OPTIONS.map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                    Cỡ chữ tên ({Math.round(nameScale * 100)}%)
+                  </label>
+                  <input
+                    type="range"
+                    min="0.7"
+                    max="1.3"
+                    step="0.02"
+                    value={nameScale}
+                    onChange={(e) => setNameScale(parseFloat(e.target.value))}
+                    className="w-full accent-amber-400 cursor-pointer mt-2"
+                  />
+                </div>
               </div>
 
               {/* Chủ đề môn học & Font chữ */}
@@ -741,6 +870,59 @@ export default function App() {
 
           {/* VÙNG PREVIEW 1920x1080 TỰ CO GIÃN (8 CỘT) */}
           <main className="xl:col-span-8 bg-slate-900/70 p-3 md:p-5 rounded-2xl border border-slate-800 shadow-2xl">
+            {/* Thanh công cụ căn chỉnh ảnh (không nằm trong ảnh xuất) */}
+            <div
+              data-crop-toolbar="true"
+              className={`mb-3 rounded-xl px-3 py-2 flex flex-wrap items-center gap-3 text-xs border transition ${
+                isCropMode ? "bg-sky-950/80 border-sky-600 text-sky-100" : "bg-slate-950/60 border-slate-800 text-slate-400"
+              }`}
+            >
+              {isCropMode ? (
+                <>
+                  <span className="font-bold flex items-center gap-1.5">
+                    <ZoomIn className="w-4 h-4 text-sky-300" /> Đang căn chỉnh ảnh
+                  </span>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="3"
+                    step="0.02"
+                    value={photoZoom}
+                    onChange={(e) => setPhotoZoom(parseFloat(e.target.value))}
+                    className="w-48 accent-sky-400 cursor-pointer"
+                  />
+                  <span className="font-mono w-12">{photoZoom.toFixed(2)}x</span>
+                  <button
+                    onClick={() => {
+                      setPhotoZoom(1);
+                      setPhotoPan({ x: 0, y: 0 });
+                    }}
+                    className="flex items-center gap-1 font-semibold text-sky-300 hover:text-white"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" /> Đặt lại
+                  </button>
+                  <button
+                    onClick={() => setIsCropMode(false)}
+                    className="ml-auto bg-sky-500 hover:bg-sky-400 text-slate-950 font-extrabold px-4 py-1.5 rounded-lg"
+                  >
+                    ✓ Xong (Enter)
+                  </button>
+                </>
+              ) : (
+                <>
+                  <span>
+                    💡 <b className="text-slate-200">Đúp chuột vào ảnh</b> để căn chỉnh •{" "}
+                    <b className="text-slate-200">Kéo thả ảnh</b> từ Thư viện/máy tính vào khung để thay ảnh
+                  </span>
+                  <button
+                    onClick={() => setIsCropMode(true)}
+                    className="ml-auto bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold px-3 py-1.5 rounded-lg"
+                  >
+                    ✂️ Căn chỉnh ảnh
+                  </button>
+                </>
+              )}
+            </div>
             <div ref={previewWrapRef} className="w-full overflow-hidden rounded-xl border border-slate-700/80">
               <div
                 style={{
@@ -762,10 +944,18 @@ export default function App() {
                     theme={currentTheme}
                     layoutMode={layoutMode}
                     scriptFont={scriptFont}
+                    fontFactor={currentFont.factor || 1}
+                    nameScale={nameScale}
+                    titleFont={currentTitleFont.id}
+                    titleSpacing={currentTitleFont.spacing}
                     customLogo={customLogo}
                     photoZoom={photoZoom}
                     photoPan={photoPan}
-                    onPhotoPointerDown={handlePhotoPointerDown}
+                    isCropMode={isCropMode}
+                    onEnterCrop={() => setIsCropMode(true)}
+                    onStartPan={handleStartPan}
+                    onDropImage={applyPhoto}
+                    onZoomDelta={handleZoomDelta}
                   />
                 </div>
               </div>
