@@ -108,7 +108,6 @@ function detectOnRotatedCanvas(img, targetW, targetH, classifier, angleDeg) {
     if (skinRatio < 0.2) continue;
     const score = q * (0.6 + skinRatio * 1.8);
     if (!best || score > best.score) {
-      // Chuyển tọa độ từ ảnh xoay ngược về ảnh gốc
       const dx = c - targetW / 2;
       const dy = r - targetH / 2;
       const origC = targetW / 2 + dx * Math.cos(-rad) - dy * Math.sin(-rad);
@@ -121,7 +120,6 @@ function detectOnRotatedCanvas(img, targetW, targetH, classifier, angleDeg) {
 
 /**
  * Bộ dò tìm khuôn mặt theo cụm màu da (Skin-Cluster Subject Detector)
- * Dùng khi học sinh nghiêng đầu nhiều hoặc đeo kính/phụ kiện che khuất
  */
 function detectFaceBySkinCluster(rgba, width, height) {
   const gridCols = 60;
@@ -190,7 +188,10 @@ function detectFaceBySkinCluster(rgba, width, height) {
 
 /**
  * Tự động phân tích ảnh và tính toán { zoom, pan: { x, y } }
- * để tập trung vào chủ thể (zoom vừa vặn gương mặt + vai trên vào chính giữa khung vinh danh)
+ * theo BỐ CỤC TỈ LỆ VÀNG BÁN THÂN (0.382 : 0.618):
+ * - Không zoom cận mặt đối với ảnh đã chụp gần (giữ nguyên zoom = 1.0 để thấy cổ áo, vai, tay cầm huy hiệu).
+ * - Với ảnh chụp bán thân/toàn thân có phần thân vai, lấy trọn cả Gương mặt (ở đường tỉ lệ vàng ~38% phía trên)
+ *   + Phần cổ áo, cầu vai, phù hiệu (chiếm ~62% phía dưới khung).
  */
 export async function autoDetectFaceAndCrop(imageSrc) {
   return new Promise((resolve) => {
@@ -209,7 +210,6 @@ export async function autoDetectFaceAndCrop(imageSrc) {
           return resolve({ zoom: 1, pan: { x: 0, y: 0 } });
         }
 
-        // Vẽ ảnh ra canvas phân tích (rộng 480px để phát hiện chuẩn cả ảnh chân dung gần lẫn ảnh toàn thân đứng xa)
         const targetW = 480;
         const targetH = Math.max(1, Math.round((naturalH / naturalW) * targetW));
         const scaleX = naturalW / targetW;
@@ -222,7 +222,7 @@ export async function autoDetectFaceAndCrop(imageSrc) {
         ctx.drawImage(img, 0, 0, targetW, targetH);
         const rgba = ctx.getImageData(0, 0, targetW, targetH).data;
 
-        // Ưu tiên 1: Native Shape Detection API (nếu trình duyệt bật hỗ trợ)
+        // Ưu tiên 1: Native Shape Detection API (nếu trình duyệt hỗ trợ)
         if (typeof window !== "undefined" && "FaceDetector" in window) {
           try {
             const detector = new window.FaceDetector({ fastMode: false, maxDetectedFaces: 5 });
@@ -248,7 +248,7 @@ export async function autoDetectFaceAndCrop(imageSrc) {
           }
         }
 
-        // Ưu tiên 2: Pico.js (chính xác và chạy trên mọi trình duyệt)
+        // Ưu tiên 2: Pico.js
         const classifier = await loadFaceDetector();
         if (classifier) {
           const pixels = rgbaToGrayscale(rgba, targetH, targetW);
@@ -273,12 +273,10 @@ export async function autoDetectFaceAndCrop(imageSrc) {
           for (const d of dets) {
             const [r, c, s, q] = d;
             if (q < 3.0) continue;
-            // Loại bỏ các vùng quá sát mép trên/dưới hoặc quá sát rìa ngoài
             if (r < targetH * 0.08 || r > targetH * 0.78) continue;
             if (c < targetW * 0.12 || c > targetW * 0.88) continue;
 
             const skinRatio = computeSkinRatio(rgba, targetW, targetH, r, c, s);
-            // Nếu điểm cascade < 15 thì bắt buộc phải có màu da thật để loại bỏ hoàn toàn cây cối, hoa văn
             if (q < 15.0 && skinRatio < 0.16) continue;
 
             const centerXBias = 1 - Math.abs(c / targetW - 0.5) * 0.5;
@@ -289,7 +287,6 @@ export async function autoDetectFaceAndCrop(imageSrc) {
           scoredCandidates.sort((a, b) => b.totalScore - a.totalScore);
           let best = scoredCandidates[0] || null;
 
-          // Nếu chưa thấy mặt rõ (q < 15), thử quét nghiêng ±18 độ cho các ảnh học sinh nghiêng đầu
           if (!best || best.q < 15) {
             const rotLeft = detectOnRotatedCanvas(img, targetW, targetH, classifier, -18);
             const rotRight = detectOnRotatedCanvas(img, targetW, targetH, classifier, 18);
@@ -322,12 +319,11 @@ export async function autoDetectFaceAndCrop(imageSrc) {
           );
         }
 
-        // Fallback cuối: zoom nhẹ vào phần trên-giữa của bức ảnh chân dung
-        const defaultFaceY = naturalH > naturalW ? naturalH * 0.30 : naturalH * 0.42;
-        const defaultFaceSize = Math.min(naturalW, naturalH) * 0.34;
-        return resolve(
-          calculateCropFromFace(naturalW * 0.5, defaultFaceY, defaultFaceSize, defaultFaceSize, naturalW, naturalH)
-        );
+        // Fallback cuối: giữ nguyên mức phóng 1.0x và lấy vùng tỉ lệ vàng phía trên
+        return resolve({
+          zoom: 1,
+          pan: { x: 0, y: naturalH > naturalW ? Math.round((naturalH / naturalW - 1) * 45) : 0 },
+        });
       } catch (err) {
         console.warn("Lỗi auto crop:", err);
         return resolve({ zoom: 1, pan: { x: 0, y: 0 } });
@@ -343,61 +339,70 @@ export async function autoDetectFaceAndCrop(imageSrc) {
 }
 
 /**
- * Tính toán zoom và pan trong hệ tọa độ chuẩn SVG 500x500 của SmartPhotoFrame:
- * - Trong SmartPhotoFrame, ảnh (imgW x imgH) ở mức zoom = 1 có cạnh ngắn nhất = 500 SVG units
- *   (tức baseScale = 500 / Math.min(imgW, imgH)).
- * - Khuôn mặt được zoom sao cho chiếm ~43% đường kính khung (~215 SVG units),
- *   giúp lấy trọn gương mặt + phần vai trên thật cân đối.
- * - Tâm khuôn mặt đặt tại X = 250 (chính giữa ngang), Y = 232 (hơi cao hơn tâm một chút để không cụt tóc).
+ * BỐ CỤC TỈ LỆ VÀNG CHÂN DUNG BÁN THÂN (0.382 : 0.618) TRONG KHUNG 500x500:
+ * 1. Không bao giờ zoom quá cận mặt:
+ *    - Kích thước khuôn mặt mục tiêu chỉ chiếm ~27% khung (135 SVG units) để nhường không gian
+ *      cho mái tóc, cổ áo, hai vai, phù hiệu trường và dáng tay tự nhiên.
+ *    - Nếu ảnh gốc đã là ảnh chụp cận/selfie (khuôn mặt >= 135 SVG units ở zoom 1x như Nguyễn Thanh Phúc,
+ *      Nguyễn Phan Tuấn Hùng), giữ nguyên zoom = 1.0x (tuyệt đối không phóng to thêm).
+ * 2. Đặt vị trí khuôn mặt theo Đường Tỉ Lệ Vàng (0.382 ~ Y = 190..205):
+ *    - Nếu phía dưới khuôn mặt có phần thân/vai đầy đặn, đặt tâm mặt ở Y ≈ 190 (38% từ đỉnh khung)
+ *      để phần thân vai chiếm trọn 62% bên dưới theo đúng tỉ lệ vàng.
+ *    - Nếu là ảnh selfie cận mặt, đặt tâm mặt ở Y ≈ 215 để cân đối cả tóc lẫn cổ áo.
  */
 function calculateCropFromFace(faceX, faceY, faceW, faceH, imgW, imgH) {
   const baseScale = 500 / Math.min(imgW, imgH);
 
-  // Kích thước khuôn mặt quy đổi sang đơn vị SVG ở mức zoom = 1
+  // Kích thước khuôn mặt ở mức zoom = 1.0 trong hệ tọa độ SVG 500x500
   const faceDimensionNatural = Math.max(faceW, faceH, Math.min(imgW, imgH) * 0.045);
   const faceSvgAtZoom1 = faceDimensionNatural * baseScale;
 
-  // Kích thước khuôn mặt lý tưởng trong khung 500x500 (~210 SVG units)
-  const desiredFaceSvgSize = 210;
-  let zoom = desiredFaceSvgSize / faceSvgAtZoom1;
+  // Tỉ lệ vàng bán thân: gương mặt chỉ chiếm ~135 SVG units (~27% khung 500px),
+  // giúp tổng thể (Đầu + Vai + Ngực trên = ~3.2x mặt) vừa khít khung vinh danh.
+  const desiredFaceSvgSize = 135;
 
-  // Hỗ trợ zoom từ 1.0x (ảnh chụp cận mặt) đến 5.0x (ảnh chụp toàn thân đứng xa trên sân khấu)
-  zoom = Math.max(1.0, Math.min(5.0, zoom));
+  // Nếu ảnh đã đủ gần (faceSvgAtZoom1 >= 135), giữ nguyên zoom = 1.0 để không bị cận mặt
+  let zoom = faceSvgAtZoom1 >= desiredFaceSvgSize ? 1.0 : desiredFaceSvgSize / faceSvgAtZoom1;
 
-  // Tọa độ mục tiêu của tâm khuôn mặt trong khung SVG 500x500
+  // Giới hạn zoom tối đa 3.8x cho các ảnh chụp toàn thân từ rất xa
+  zoom = Math.max(1.0, Math.min(3.8, zoom));
+
+  // Kiểm tra khoảng thân/vai thực tế bên dưới khuôn mặt trong ảnh gốc
+  const bodyBelowRatio = (imgH - faceY) / faceDimensionNatural;
+
+  // Nếu ảnh có nhiều phần thân/vai bên dưới (bodyBelowRatio >= 1.6) và mặt sau zoom vừa phải,
+  // đặt tâm mặt tại đường tỉ lệ vàng phía trên (Y = 190, tức 38% khung) để lấy trọn vai & áo.
+  // Nếu ảnh chụp cận mặt (faceSvgAtZoom1 lớn), hạ tâm mặt xuống Y = 212..222 để không thừa đỉnh đầu.
+  const faceSvgRendered = faceSvgAtZoom1 * zoom;
+  let targetYInFrame = 192;
+  if (faceSvgRendered > 155) {
+    targetYInFrame = Math.min(222, Math.round(192 + (faceSvgRendered - 155) * 0.25));
+  } else if (bodyBelowRatio < 1.35) {
+    targetYInFrame = 215;
+  }
+
   const targetXInFrame = 250;
-  const targetYInFrame = 232;
 
-  // Đảm bảo zoom đủ lớn để khi đặt mặt vào (targetXInFrame, targetYInFrame) không bị lộ mép ảnh vào khung
-  const margin = 6;
-  const safeLeft = Math.max(faceX, imgW * 0.06);
-  const safeRight = Math.max(imgW - faceX, imgW * 0.06);
-  const safeTop = Math.max(faceY, imgH * 0.06);
-  const safeBottom = Math.max(imgH - faceY, imgH * 0.06);
+  // Chỉ tăng nhẹ zoom nếu khuôn mặt nằm quá sát mép trái/phải của ảnh ngang
+  // (không ép tăng zoom theo mép trên vì mặt ở 30-38% phía trên vốn đã đúng tỉ lệ vàng)
+  const safeLeft = Math.max(faceX, imgW * 0.08);
+  const safeRight = Math.max(imgW - faceX, imgW * 0.08);
+  const minZoomLeft = 195 / (safeLeft * baseScale);
+  const minZoomRight = 195 / (safeRight * baseScale);
 
-  const minZoomLeft = (targetXInFrame - margin) / (safeLeft * baseScale);
-  const minZoomRight = (500 - margin - targetXInFrame) / (safeRight * baseScale);
-  const minZoomTop = (targetYInFrame - margin) / (safeTop * baseScale);
-  const minZoomBottom = (500 - margin - targetYInFrame) / (safeBottom * baseScale);
-
-  const minZoomForCoverage = Math.min(
-    5.0,
-    Math.max(1.0, minZoomLeft, minZoomRight, minZoomTop, minZoomBottom)
-  );
-  zoom = Math.max(zoom, minZoomForCoverage);
+  zoom = Math.max(zoom, Math.min(3.8, Math.max(1.0, minZoomLeft, minZoomRight)));
   zoom = +zoom.toFixed(2);
 
   // Kích thước ảnh trên SVG sau khi nhân zoom
   const renderW = imgW * baseScale * zoom;
   const renderH = imgH * baseScale * zoom;
 
-  // Trong SmartPhotoFrame:
-  // svgX = 250 + (faceX - imgW / 2) * baseScale * zoom + panX = targetXInFrame
-  // svgY = 250 + (faceY - imgH / 2) * baseScale * zoom + panY = targetYInFrame
+  // Đưa tâm mặt về (targetXInFrame, targetYInFrame)
   let panX = Math.round(targetXInFrame - 250 - (faceX - imgW / 2) * baseScale * zoom);
   let panY = Math.round(targetYInFrame - 250 - (faceY - imgH / 2) * baseScale * zoom);
 
   // Kẹp panX, panY để 4 cạnh ảnh luôn phủ kín toàn bộ khung 500x500 (không bao giờ hở viền xám)
+  const margin = 4;
   const maxPanX = Math.max(0, Math.round(renderW / 2 - (250 - margin)));
   const maxPanY = Math.max(0, Math.round(renderH / 2 - (250 - margin)));
 
