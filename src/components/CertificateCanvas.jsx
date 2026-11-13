@@ -133,19 +133,12 @@ export const CertificateCanvas = ({
               <span>{certData.prize}</span>
             </div>
 
-            {/* Thông tin bổ sung (SBD / Ngày sinh) */}
+            {/* Thông tin bổ sung (Ngày sinh) */}
             {certData.showMeta && certData.metaText && (
-              <div className="mt-5 font-jakarta font-bold text-[22px] px-8 py-2 rounded-full bg-white/90 text-slate-800 border-2 border-amber-300 shadow">
+              <div className="mt-6 font-jakarta font-bold text-[22px] px-8 py-2 rounded-full bg-white/90 text-slate-800 border-2 border-amber-300 shadow">
                 {certData.metaText}
               </div>
             )}
-
-            <div
-              className="mt-7 text-[19px] font-bold tracking-[0.25em] uppercase opacity-70"
-              style={{ color: effectiveTheme.primary }}
-            >
-              — {effectiveTheme.symbol} —
-            </div>
           </div>
         </div>
       )}

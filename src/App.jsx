@@ -94,7 +94,7 @@ export default function App() {
     role: initialStudent.className ? `Học sinh lớp ${initialStudent.className}` : `SBD: ${initialStudent.sbd}`,
     name: initialStudent.name,
     prize: `ĐẠT ${initialStudent.prize.toUpperCase()} - MÔN ${initialStudent.subject.toUpperCase()}`,
-    metaText: `SBD: ${initialStudent.sbd} • Ngày sinh: ${initialStudent.dob}`,
+    metaText: initialStudent.dob ? `Ngày sinh: ${initialStudent.dob}` : "",
     showMeta: true,
     event: DEFAULT_EVENT,
     photo: initialStudent.photo || DEFAULT_STUDENT_PHOTO,
@@ -109,9 +109,7 @@ export default function App() {
       role: student.className ? `Học sinh lớp ${student.className}` : `Học sinh đội tuyển ${student.subject}`,
       name: toVietnameseTitleCase(student.name),
       prize: `ĐẠT ${student.prize.toUpperCase()} - MÔN ${student.subject.toUpperCase()}`,
-      metaText: [student.sbd ? `SBD: ${student.sbd}` : "", student.dob ? `Ngày sinh: ${student.dob}` : ""]
-        .filter(Boolean)
-        .join(" • "),
+      metaText: student.dob ? `Ngày sinh: ${student.dob}` : "",
       event: DEFAULT_EVENT,
       photo: student.photo || DEFAULT_STUDENT_PHOTO,
     }));
@@ -696,7 +694,7 @@ export default function App() {
                       checked={certData.showMeta}
                       onChange={(e) => setCertData({ ...certData, showMeta: e.target.checked })}
                     />
-                    Hiện SBD & Ngày sinh
+                    Hiện Ngày sinh
                   </label>
                 </div>
                 <input

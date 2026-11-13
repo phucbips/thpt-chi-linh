@@ -337,51 +337,105 @@ export const SvgGold3DTitle = ({ text = "VINH DANH", width = 680, height = 130, 
 );
 
 // ============================================================================
-// 5. VÒNG NGUYỆT QUẾ VÀNG 3D
+// 5. VÒNG NGUYỆT QUẾ VÀNG 3D SANG TRỌNG (LIỀN MẠCH, ÔM TRỌN KHUNG ẢNH)
 // ============================================================================
-export const GoldenLaurelWreath = () => (
-  <svg viewBox="0 0 380 380" className="absolute -inset-12 w-[calc(100%+96px)] h-[calc(100%+96px)] pointer-events-none z-20 drop-shadow-xl">
-    <defs>
-      <linearGradient id="goldLeafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#fef08a" />
-        <stop offset="35%" stopColor="#eab308" />
-        <stop offset="70%" stopColor="#a16207" />
-        <stop offset="100%" stopColor="#fde047" />
-      </linearGradient>
-      <g id="cl-leafPair">
-        <path d="M0,0 C-13,-9 -17,-26 -4,-36 C4,-24 7,-11 0,0 Z" fill="url(#goldLeafGrad)" />
-        <path d="M0,0 C13,-9 17,-26 4,-36 C-4,-24 -7,-11 0,0 Z" fill="url(#goldLeafGrad)" transform="rotate(28)" />
-        <circle cx="0" cy="-6" r="2.6" fill="#fef08a" />
-      </g>
-    </defs>
-    <g transform="translate(190, 190)">
-      {[-205, -185, -165, -145, -125, -105, -85, -65, -45, -25].map((angle, idx) => {
-        const rad = (angle * Math.PI) / 180;
-        const r = 166;
-        return (
-          <use
-            key={`l-${idx}`}
-            href="#cl-leafPair"
-            transform={`translate(${r * Math.cos(rad)}, ${r * Math.sin(rad)}) rotate(${angle + 90}) scale(${1.02 - idx * 0.03})`}
+export const GoldenLaurelWreath = () => {
+  // Tạo các cặp lá dọc theo cung tròn từ dưới lên đỉnh
+  const angles = [115, 132, 149, 166, 183, 200, 217, 234, 250];
+  const r = 178;
+
+  const renderBranch = (mirror = false) =>
+    angles.map((deg, idx) => {
+      const rad = (deg * Math.PI) / 180;
+      const x = 220 + (mirror ? -1 : 1) * r * Math.cos(rad);
+      const y = 220 + r * Math.sin(rad);
+      const tangentDeg = mirror ? -(deg - 90) : deg - 90;
+      const scale = 1.08 - idx * 0.045;
+      return (
+        <g key={`${mirror ? "r" : "l"}-${idx}`} transform={`translate(${x}, ${y}) rotate(${tangentDeg}) scale(${scale})`}>
+          {/* Lá ngoài */}
+          <path
+            d="M0,0 C-14,-10 -22,-30 -4,-44 C8,-28 10,-12 0,0 Z"
+            fill="url(#goldLeafBright)"
+            stroke="#854d0e"
+            strokeWidth="0.9"
+            transform="rotate(-22)"
           />
-        );
-      })}
-      {[-25, -45, -65, -85, -105, -125, -145, -165, -185, -205].map((angle, idx) => {
-        const rad = (angle * Math.PI) / 180;
-        const r = 166;
-        return (
-          <use
-            key={`r-${idx}`}
-            href="#cl-leafPair"
-            transform={`translate(${-r * Math.cos(rad)}, ${r * Math.sin(rad)}) scale(-1, 1) rotate(${angle + 90}) scale(${0.75 + idx * 0.03})`}
+          <path d="M-2,-4 L-5,-32" stroke="#fef9c3" strokeWidth="1" opacity="0.7" transform="rotate(-22)" />
+          {/* Lá trong */}
+          <path
+            d="M0,0 C14,-10 20,-28 4,-42 C-8,-26 -10,-12 0,0 Z"
+            fill="url(#goldLeafDeep)"
+            stroke="#78350f"
+            strokeWidth="0.9"
+            transform="rotate(24)"
           />
-        );
-      })}
-    </g>
-    <path d="M158,345 Q190,332 222,345" stroke="url(#goldLeafGrad)" strokeWidth="5.5" fill="none" strokeLinecap="round" />
-    <circle cx="190" cy="340" r="6.5" fill="url(#goldLeafGrad)" />
-  </svg>
-);
+          <path d="M2,-4 L5,-30" stroke="#fef08a" strokeWidth="1" opacity="0.65" transform="rotate(24)" />
+          {/* Hạt vàng nhỏ */}
+          <circle cx="0" cy="-3" r="2.8" fill="#fef08a" />
+        </g>
+      );
+    });
+
+  return (
+    <svg
+      viewBox="0 0 440 440"
+      className="absolute -inset-16 w-[calc(100%+128px)] h-[calc(100%+128px)] pointer-events-none z-20 drop-shadow-[0_10px_18px_rgba(120,53,15,0.35)]"
+    >
+      <defs>
+        <linearGradient id="goldLeafBright" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#fffbeb" />
+          <stop offset="35%" stopColor="#fde047" />
+          <stop offset="75%" stopColor="#ca8a04" />
+          <stop offset="100%" stopColor="#fef08a" />
+        </linearGradient>
+        <linearGradient id="goldLeafDeep" x1="100%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#fef08a" />
+          <stop offset="45%" stopColor="#d4af37" />
+          <stop offset="100%" stopColor="#854d0e" />
+        </linearGradient>
+      </defs>
+
+      {/* Thân cành cong nối liền các lá */}
+      <path
+        d="M 212,386 A 178,178 0 0,1 148,58"
+        fill="none"
+        stroke="url(#goldLeafDeep)"
+        strokeWidth="4.5"
+        strokeLinecap="round"
+      />
+      <path
+        d="M 228,386 A 178,178 0 0,0 292,58"
+        fill="none"
+        stroke="url(#goldLeafDeep)"
+        strokeWidth="4.5"
+        strokeLinecap="round"
+      />
+
+      {/* Hai nhánh lá nguyệt quế */}
+      {renderBranch(false)}
+      {renderBranch(true)}
+
+      {/* Ngôi sao vàng trên đỉnh */}
+      <polygon
+        points="220,24 225,38 240,38 228,47 233,61 220,52 207,61 212,47 200,38 215,38"
+        fill="url(#goldLeafBright)"
+        stroke="#92400e"
+        strokeWidth="1.2"
+      />
+
+      {/* Nút thắt ruy-băng vàng ở đáy */}
+      <path
+        d="M188,388 Q220,374 252,388"
+        stroke="url(#goldLeafBright)"
+        strokeWidth="6"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <circle cx="220" cy="384" r="8" fill="url(#goldLeafBright)" stroke="#854d0e" strokeWidth="1.5" />
+    </svg>
+  );
+};
 
 // ============================================================================
 // 6. RUY-BĂNG VÀNG 3D CHỨA TÊN HỌC SINH
@@ -551,20 +605,21 @@ export const SvgPhotoFrame = ({
 // 9. HAI DẢI RUY-BĂNG ĐỎ SỌC VÀNG CHO MẪU GIÁO VIÊN (BỐ CỤC 3)
 // ============================================================================
 export const TeacherDualRibbons = () => (
-  <svg viewBox="0 0 260 120" className="w-56 h-24 -mt-6 z-0 drop-shadow-xl pointer-events-none">
+  <svg viewBox="0 0 360 180" className="w-[340px] h-[170px] -mt-20 relative z-0 drop-shadow-2xl pointer-events-none">
     <defs>
       <linearGradient id="redRibbon" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#991b1b" />
+        <stop offset="0%" stopColor="#7f1d1d" />
+        <stop offset="45%" stopColor="#b91c1c" />
         <stop offset="100%" stopColor="#dc2626" />
       </linearGradient>
     </defs>
-    {/* Dải trái */}
-    <polygon points="65,0 122,0 102,115 70,92 38,115" fill="url(#redRibbon)" stroke="#fde047" strokeWidth="2.5" />
-    <line x1="78" y1="0" x2="58" y2="100" stroke="#fde047" strokeWidth="3" />
-    <line x1="108" y1="0" x2="88" y2="100" stroke="#fde047" strokeWidth="3" />
-    {/* Dải phải */}
-    <polygon points="138,0 195,0 222,115 190,92 158,115" fill="url(#redRibbon)" stroke="#fde047" strokeWidth="2.5" />
-    <line x1="152" y1="0" x2="172" y2="100" stroke="#fde047" strokeWidth="3" />
-    <line x1="182" y1="0" x2="202" y2="100" stroke="#fde047" strokeWidth="3" />
+    {/* Dải trái lớn & cân đối */}
+    <polygon points="95,0 172,0 140,170 92,135 44,170" fill="url(#redRibbon)" stroke="#fde047" strokeWidth="3" />
+    <line x1="112" y1="0" x2="72" y2="150" stroke="#fde047" strokeWidth="4" />
+    <line x1="154" y1="0" x2="114" y2="150" stroke="#fde047" strokeWidth="4" />
+    {/* Dải phải lớn & cân đối */}
+    <polygon points="188,0 265,0 316,170 268,135 220,170" fill="url(#redRibbon)" stroke="#fde047" strokeWidth="3" />
+    <line x1="206" y1="0" x2="246" y2="150" stroke="#fde047" strokeWidth="4" />
+    <line x1="248" y1="0" x2="288" y2="150" stroke="#fde047" strokeWidth="4" />
   </svg>
 );
