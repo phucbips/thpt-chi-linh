@@ -25,6 +25,13 @@ export const CertificateCanvas = ({
   const effectiveTheme = theme;
 
   const isFirstPrize = certData.prize.toLowerCase().includes("nhất");
+  const prizeLen = certData.prize.length;
+  const prizeSizeClass =
+    prizeLen > 38
+      ? "text-[24px] px-9 py-4"
+      : prizeLen > 30
+      ? "text-[27px] px-11 py-4"
+      : "text-[32px] px-14 py-5";
 
   return (
     <div
@@ -117,7 +124,7 @@ export const CertificateCanvas = ({
 
             {/* Huy hiệu Giải thưởng */}
             <div
-              className={`px-14 py-5 rounded-full text-white font-extrabold text-[34px] tracking-wide shadow-2xl border-4 flex items-center gap-4 ${
+              className={`rounded-full text-white font-extrabold tracking-wide shadow-2xl border-4 flex items-center gap-3.5 whitespace-nowrap ${prizeSizeClass} ${
                 isFirstPrize ? "border-yellow-300" : "border-amber-300/90"
               }`}
               style={{ background: effectiveTheme.badgeBg }}
@@ -193,7 +200,7 @@ export const CertificateCanvas = ({
             </div>
 
             <div
-              className="px-14 py-4 rounded-full text-white font-extrabold text-[34px] shadow-2xl border-4 border-amber-300 mb-6 flex items-center gap-3"
+              className={`rounded-full text-white font-extrabold shadow-2xl border-4 border-amber-300 mb-6 flex items-center gap-3 whitespace-nowrap ${prizeSizeClass}`}
               style={{ background: effectiveTheme.badgeBg }}
             >
               <span>{isFirstPrize ? "👑" : "🏅"}</span>
@@ -291,7 +298,9 @@ export const CertificateCanvas = ({
             </div>
 
             <div
-              className="px-12 py-5 rounded-full text-white font-extrabold text-[30px] tracking-wide shadow-2xl border-4 border-amber-300 flex items-center gap-3"
+              className={`rounded-full text-white font-extrabold tracking-wide shadow-2xl border-4 border-amber-300 flex items-center gap-3 whitespace-nowrap ${
+                prizeLen > 45 ? "text-[23px] px-9 py-4" : "text-[28px] px-11 py-5"
+              }`}
               style={{
                 background: "linear-gradient(90deg, #7f1d1d 0%, #dc2626 50%, #7f1d1d 100%)",
               }}

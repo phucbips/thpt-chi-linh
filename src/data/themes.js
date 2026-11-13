@@ -158,8 +158,12 @@ export const SUBJECT_THEMES = {
 };
 
 export const FONT_OPTIONS = [
-  { id: "font-script-alex", label: "Alex Brush (Sang trọng)" },
+  { id: "font-script-alex", label: "Alex Brush (Chữ ký mảnh)" },
   { id: "font-script-vibes", label: "Great Vibes (Hoàng gia)" },
+  { id: "font-script-charm", label: "Charm (Thư pháp mềm mại)" },
   { id: "font-script-dancing", label: "Dancing Script (Rõ nét)" },
-  { id: "font-serif-title", label: "Playfair Display (Trang trọng)" },
+  { id: "font-script-playwrite", label: "Playwrite VN (Chữ viết Việt Nam)" },
+  { id: "font-script-pacifico", label: "Pacifico (Nét cọ đậm)" },
+  { id: "font-serif-cormorant", label: "Cormorant Italic (Cổ điển quý phái)" },
+  { id: "font-serif-title", label: "Playfair Display (Chữ in trang trọng)" },
 ];

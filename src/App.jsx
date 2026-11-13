@@ -21,10 +21,12 @@ import {
 import {
   INITIAL_STUDENTS,
   TEACHERS_BY_SUBJECT,
+  TEACHER_PHOTOS_BY_SUBJECT,
   normalizeDob,
   normalizePrizeName,
   normalizeSubjectName,
   summarizePrizesBySubject,
+  toVietnameseTitleCase,
 } from "./data/studentsData";
 import { FONT_OPTIONS, SUBJECT_THEMES } from "./data/themes";
 import { CertificateCanvas } from "./components/CertificateCanvas";
@@ -95,7 +97,7 @@ export default function App() {
     metaText: `SBD: ${initialStudent.sbd} • Ngày sinh: ${initialStudent.dob}`,
     showMeta: true,
     event: DEFAULT_EVENT,
-    photo: DEFAULT_STUDENT_PHOTO,
+    photo: initialStudent.photo || DEFAULT_STUDENT_PHOTO,
   });
 
   const selectStudent = (student) => {
@@ -105,12 +107,13 @@ export default function App() {
       ...prev,
       subjectKey: SUBJECT_THEMES[student.subject] ? student.subject : "Toán",
       role: student.className ? `Học sinh lớp ${student.className}` : `Học sinh đội tuyển ${student.subject}`,
-      name: student.name,
+      name: toVietnameseTitleCase(student.name),
       prize: `ĐẠT ${student.prize.toUpperCase()} - MÔN ${student.subject.toUpperCase()}`,
       metaText: [student.sbd ? `SBD: ${student.sbd}` : "", student.dob ? `Ngày sinh: ${student.dob}` : ""]
         .filter(Boolean)
         .join(" • "),
       event: DEFAULT_EVENT,
+      photo: student.photo || DEFAULT_STUDENT_PHOTO,
     }));
   };
 
@@ -128,6 +131,7 @@ export default function App() {
       metaText: `Tổng cộng ${summary.total} học sinh đạt giải cấp Thành phố`,
       event:
         "BỒI DƯỠNG HỌC SINH ĐẠT THÀNH TÍCH CAO\nKỲ THI CHỌN HỌC SINH GIỎI THÀNH PHỐ HẢI PHÒNG CẤP THPT\nNĂM HỌC 2026 - 2027",
+      photo: TEACHER_PHOTOS_BY_SUBJECT[subj] || DEFAULT_STUDENT_PHOTO,
     }));
   };
 
@@ -189,7 +193,13 @@ export default function App() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      setCertData((prev) => ({ ...prev, photo: ev.target.result }));
+      const dataUrl = ev.target.result;
+      setCertData((prev) => ({ ...prev, photo: dataUrl }));
+      if (selectedStudentId != null) {
+        setStudents((prev) =>
+          prev.map((s) => (s.id === selectedStudentId ? { ...s, photo: dataUrl } : s))
+        );
+      }
       setPhotoZoom(1);
       setPhotoPan({ x: 0, y: 0 });
     };
@@ -237,7 +247,7 @@ export default function App() {
 
           // Hỗ trợ định dạng QĐ 4366: [STT, SBD, Họ tên, Ngày sinh, Môn, Trường, Giải, GV]
           const sbd = String(row[1] || "").trim();
-          const name = String(row[2] || "").trim();
+          const name = toVietnameseTitleCase(row[2] || "");
           const dob = normalizeDob(row[3] || "");
           const subject = normalizeSubjectName(row[4] || "Toán");
           const school = String(row[5] || "THPT Chí Linh").trim();
@@ -648,7 +658,17 @@ export default function App() {
               {/* Chỉnh sửa trực tiếp */}
               <div className="grid grid-cols-3 gap-2">
                 <div className="col-span-2">
-                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Họ và Tên</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[11px] font-semibold text-slate-400">Họ và Tên</label>
+                    <button
+                      type="button"
+                      onClick={() => setCertData({ ...certData, name: toVietnameseTitleCase(certData.name) })}
+                      className="text-[10px] font-bold text-amber-400 hover:text-amber-300"
+                      title="Chuẩn hóa viết hoa chữ cái đầu mỗi từ"
+                    >
+                      Aa Chuẩn hóa tên
+                    </button>
+                  </div>
                   <input
                     type="text"
                     value={certData.name}

@@ -355,25 +355,25 @@ export const GoldenLaurelWreath = () => (
       </g>
     </defs>
     <g transform="translate(190, 190)">
-      {[-155, -135, -115, -95, -75, -55, -35, -15].map((angle, idx) => {
+      {[-205, -185, -165, -145, -125, -105, -85, -65, -45, -25].map((angle, idx) => {
         const rad = (angle * Math.PI) / 180;
-        const r = 162;
+        const r = 166;
         return (
           <use
             key={`l-${idx}`}
             href="#cl-leafPair"
-            transform={`translate(${r * Math.cos(rad)}, ${r * Math.sin(rad)}) rotate(${angle + 90}) scale(${1.05 - idx * 0.04})`}
+            transform={`translate(${r * Math.cos(rad)}, ${r * Math.sin(rad)}) rotate(${angle + 90}) scale(${1.02 - idx * 0.03})`}
           />
         );
       })}
-      {[-25, -45, -65, -85, -105, -125, -145, -165].map((angle, idx) => {
+      {[-25, -45, -65, -85, -105, -125, -145, -165, -185, -205].map((angle, idx) => {
         const rad = (angle * Math.PI) / 180;
-        const r = 162;
+        const r = 166;
         return (
           <use
             key={`r-${idx}`}
             href="#cl-leafPair"
-            transform={`translate(${-r * Math.cos(rad)}, ${r * Math.sin(rad)}) scale(-1, 1) rotate(${angle + 90}) scale(${0.77 + idx * 0.04})`}
+            transform={`translate(${-r * Math.cos(rad)}, ${r * Math.sin(rad)}) scale(-1, 1) rotate(${angle + 90}) scale(${0.75 + idx * 0.03})`}
           />
         );
       })}

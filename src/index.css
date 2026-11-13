@@ -17,6 +17,10 @@
 .font-script-alex { font-family: 'Alex Brush', cursive; }
 .font-script-vibes { font-family: 'Great Vibes', cursive; }
 .font-script-dancing { font-family: 'Dancing Script', cursive; }
+.font-script-charm { font-family: 'Charm', cursive; }
+.font-script-playwrite { font-family: 'Playwrite VN', cursive; }
+.font-script-pacifico { font-family: 'Pacifico', cursive; }
+.font-serif-cormorant { font-family: 'Cormorant Garamond', serif; font-style: italic; }
 
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: #0f172a; border-radius: 4px; }
