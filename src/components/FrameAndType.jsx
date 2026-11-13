@@ -182,6 +182,7 @@ export const RibbonNameBanner = ({ name, fontClass, fontFactor = 1, nameScale = 
 const STAR_POINTS =
   "250,8 292,42 346,24 366,76 420,82 418,136 462,172 440,222 468,268 428,308 434,362 380,380 364,432 308,426 270,468 220,446 172,468 134,426 78,432 62,380 8,362 14,308 -26,268 2,222 -20,172 24,136 22,82 76,76 96,24 150,42 192,8 221,30";
 const HEX_POINTS = "250,12 456,131 456,369 250,488 44,369 44,131";
+const aspectCache = new Map();
 
 export const SmartPhotoFrame = ({
   photo,
@@ -200,7 +201,7 @@ export const SmartPhotoFrame = ({
   const uid = safeId(useId());
   const wrapRef = useRef(null);
   const [dragOver, setDragOver] = useState(false);
-  const [aspect, setAspect] = useState(1);
+  const [aspect, setAspect] = useState(() => (photo && aspectCache.get(photo)) || 1);
 
   // Ghi nhận tỉ lệ khung hình tự nhiên của ảnh để không bao giờ bị cắt mất đỉnh đầu/chân ảnh dọc
   useEffect(() => {
@@ -208,11 +209,17 @@ export const SmartPhotoFrame = ({
       setAspect(1);
       return;
     }
+    if (aspectCache.has(photo)) {
+      setAspect(aspectCache.get(photo));
+      return;
+    }
     let cancelled = false;
     const im = new Image();
     im.onload = () => {
-      if (!cancelled && im.naturalWidth && im.naturalHeight) {
-        setAspect(im.naturalWidth / im.naturalHeight);
+      if (im.naturalWidth && im.naturalHeight) {
+        const ratio = im.naturalWidth / im.naturalHeight;
+        aspectCache.set(photo, ratio);
+        if (!cancelled) setAspect(ratio);
       }
     };
     im.src = photo;
@@ -252,8 +259,9 @@ export const SmartPhotoFrame = ({
     if (src) onDropImage?.(src.trim());
   };
 
-  const baseW = aspect >= 1 ? 500 * aspect : 500;
-  const baseH = aspect >= 1 ? 500 : 500 / aspect;
+  const effectiveAspect = (photo && aspectCache.get(photo)) || aspect || 1;
+  const baseW = effectiveAspect >= 1 ? 500 * effectiveAspect : 500;
+  const baseH = effectiveAspect >= 1 ? 500 : 500 / effectiveAspect;
   const imgW = baseW * zoom;
   const imgH = baseH * zoom;
   const imgX = 250 - imgW / 2 + panX;

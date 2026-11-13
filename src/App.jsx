@@ -68,9 +68,44 @@ export default function App() {
   const [photoZoom, setPhotoZoom] = useState(1);
   const [photoPan, setPhotoPan] = useState({ x: 0, y: 0 });
 
-  // Chế độ căn chỉnh ảnh trong khung (kiểu Canva) + bộ nhớ căn chỉnh riêng cho từng người
+  // Chế độ căn chỉnh ảnh trong khung (kiểu Canva) + bộ nhớ căn chỉnh riêng cho từng người (lưu bền vững vào localStorage)
   const [isCropMode, setIsCropMode] = useState(false);
-  const cropMapRef = useRef({});
+  const cropMapRef = useRef(null);
+  if (cropMapRef.current === null) {
+    const presetManualCrops = {
+      "hs-1": { zoom: 1.58, pan: { x: -62, y: -10 }, manual: true },
+      "hs-3": { zoom: 1.12, pan: { x: 35, y: -42 }, manual: true },
+      "hs-43": { zoom: 1.0, pan: { x: 0, y: -45 }, manual: true },
+      "hs-44": { zoom: 1.0, pan: { x: 0, y: -15 }, manual: true },
+    };
+    try {
+      const raw = localStorage.getItem("cl_saved_crops_v1");
+      const parsed = raw ? JSON.parse(raw) : {};
+      cropMapRef.current = { ...presetManualCrops, ...parsed };
+    } catch (e) {
+      cropMapRef.current = { ...presetManualCrops };
+    }
+  }
+  const [isManualLocked, setIsManualLocked] = useState(false);
+
+  const persistCropMap = () => {
+    try {
+      // Chỉ lưu các mục đã chỉnh tay (manual: true) vào localStorage để bền vững qua F5 / tải lại trang
+      const manualOnly = {};
+      Object.entries(cropMapRef.current || {}).forEach(([k, v]) => {
+        if (v && v.manual) manualOnly[k] = v;
+      });
+      localStorage.setItem("cl_saved_crops_v1", JSON.stringify(manualOnly));
+    } catch (e) {}
+  };
+
+  const saveManualCrop = (zoomVal, panVal) => {
+    const key = currentKeyRef.current;
+    cropMapRef.current[key] = { zoom: zoomVal, pan: panVal, manual: true };
+    setIsManualLocked(true);
+    persistCropMap();
+  };
+
   const currentKeyRef = useRef(`hs-${INITIAL_STUDENTS[5].id}`);
   const [libraryUploads, setLibraryUploads] = useState([]);
 
@@ -117,28 +152,33 @@ export default function App() {
     photo: initialStudent.photo || DEFAULT_STUDENT_PHOTO,
   });
 
-  // Nạp lại vị trí căn chỉnh ảnh đã lưu cho từng người (hoặc tự động nhận diện nếu chưa lưu)
+  // Nạp lại vị trí căn chỉnh ảnh đã lưu cho từng người (ưu tiên tuyệt đối vị trí đã căn chỉnh tay)
   const loadCropFor = async (key, photoSrc) => {
     currentKeyRef.current = key;
     const saved = cropMapRef.current[key];
     if (saved) {
       setPhotoZoom(saved.zoom);
       setPhotoPan(saved.pan);
+      setIsManualLocked(Boolean(saved.manual));
       setIsCropMode(false);
       return;
     }
 
+    setIsManualLocked(false);
     if (autoFaceAlign && photoSrc && !photoSrc.startsWith("data:image/svg")) {
       setIsDetectingFace(true);
       try {
         const detected = await autoDetectFaceAndCrop(photoSrc);
-        cropMapRef.current[key] = detected;
-        if (currentKeyRef.current === key) {
-          setPhotoZoom(detected.zoom);
-          setPhotoPan(detected.pan);
+        // Nếu trong lúc chờ mà người dùng chưa tự chỉnh tay thì mới lưu kết quả máy
+        if (!cropMapRef.current[key]?.manual) {
+          cropMapRef.current[key] = { ...detected, manual: false };
+          if (currentKeyRef.current === key) {
+            setPhotoZoom(detected.zoom);
+            setPhotoPan(detected.pan);
+          }
         }
       } catch (e) {
-        if (currentKeyRef.current === key) {
+        if (currentKeyRef.current === key && !cropMapRef.current[key]?.manual) {
           setPhotoZoom(1);
           setPhotoPan({ x: 0, y: 0 });
         }
@@ -218,13 +258,6 @@ export default function App() {
   };
 
   // ===================== KHUNG ẢNH KIỂU CANVA =====================
-  // Lưu vị trí căn chỉnh thủ công khi đang ở chế độ chỉnh sửa
-  useEffect(() => {
-    if (isCropMode) {
-      cropMapRef.current[currentKeyRef.current] = { zoom: photoZoom, pan: photoPan };
-    }
-  }, [photoZoom, photoPan, isCropMode]);
-
   const clampPan = (v, zoom) => {
     const lim = 200 + 380 * zoom;
     return Math.max(-lim, Math.min(lim, v));
@@ -242,9 +275,22 @@ export default function App() {
     };
   };
 
-  const handleZoomDelta = React.useCallback((d) => {
-    setPhotoZoom((z) => Math.max(0.5, Math.min(5, +(z + d).toFixed(2))));
-  }, []);
+  const handleZoomDelta = React.useCallback(
+    (d) => {
+      setPhotoZoom((z) => {
+        const nextZ = Math.max(0.5, Math.min(5, +(z + d).toFixed(2)));
+        cropMapRef.current[currentKeyRef.current] = {
+          zoom: nextZ,
+          pan: cropMapRef.current[currentKeyRef.current]?.pan || photoPan,
+          manual: true,
+        };
+        setIsManualLocked(true);
+        persistCropMap();
+        return nextZ;
+      });
+    },
+    [photoPan]
+  );
 
   // Thả ảnh vào khung → tự khớp hình khung + tự động nhận diện mặt vào tâm
   const applyPhoto = async (src) => {
@@ -253,11 +299,12 @@ export default function App() {
       setStudents((prev) => prev.map((s) => (s.id === selectedStudentId ? { ...s, photo: src } : s)));
     }
 
+    setIsManualLocked(false);
     if (autoFaceAlign && src && !src.startsWith("data:image/svg")) {
       setIsDetectingFace(true);
       try {
         const detected = await autoDetectFaceAndCrop(src);
-        cropMapRef.current[currentKeyRef.current] = detected;
+        cropMapRef.current[currentKeyRef.current] = { ...detected, manual: false };
         setPhotoZoom(detected.zoom);
         setPhotoPan(detected.pan);
       } catch (e) {
@@ -278,7 +325,9 @@ export default function App() {
     setIsDetectingFace(true);
     try {
       const detected = await autoDetectFaceAndCrop(certData.photo);
-      cropMapRef.current[currentKeyRef.current] = detected;
+      cropMapRef.current[currentKeyRef.current] = { ...detected, manual: false };
+      setIsManualLocked(false);
+      persistCropMap();
       setPhotoZoom(detected.zoom);
       setPhotoPan(detected.pan);
     } catch (e) {
@@ -294,10 +343,12 @@ export default function App() {
       // 1 px trên màn hình = (1/scale) px canvas; khung SVG 560 đơn vị ≈ kích thước khung px
       const dx = (e.clientX - dragRef.current.startX) / previewScale;
       const dy = (e.clientY - dragRef.current.startY) / previewScale;
-      setPhotoPan((prev) => ({
+      const nextPan = {
         x: clampPan(dragRef.current.origX + dx, photoZoom),
         y: clampPan(dragRef.current.origY + dy, photoZoom),
-      }));
+      };
+      setPhotoPan(nextPan);
+      saveManualCrop(photoZoom, nextPan);
     };
     const onUp = () => {
       dragRef.current.active = false;
@@ -464,8 +515,9 @@ export default function App() {
     const prevId = selectedStudentId;
     const prevLayout = layoutMode;
     const prevKey = currentKeyRef.current;
+    const prevZoom = photoZoom;
+    const prevPan = { ...photoPan };
 
-    const prevCropMap = { ...cropMapRef.current };
     if (layoutMode === "teacher") setLayoutMode("ribbon");
     setIsCropMode(false);
     setBatchProgress({ current: 0, total: filteredStudents.length });
@@ -476,21 +528,53 @@ export default function App() {
       for (let i = 0; i < filteredStudents.length; i++) {
         const st = filteredStudents[i];
         setBatchProgress({ current: i + 1, total: filteredStudents.length });
-        selectStudent(st);
 
-        // Nếu bật Auto Face Align và chưa có tọa độ crop, tự tính toán tức thì
         const key = `hs-${st.id}`;
-        if (autoFaceAlign && !cropMapRef.current[key] && st.photo && !st.photo.startsWith("data:image/svg")) {
-          try {
-            const detected = await autoDetectFaceAndCrop(st.photo);
-            cropMapRef.current[key] = detected;
-            setPhotoZoom(detected.zoom);
-            setPhotoPan(detected.pan);
-          } catch (e) {}
+        currentKeyRef.current = key;
+        const photo = st.photo || DEFAULT_STUDENT_PHOTO;
+
+        // Ưu tiên tuyệt đối tọa độ đã lưu (đặc biệt là tọa độ người dùng đã tự căn chỉnh tay!)
+        // Không gọi selectStudent(st) để tránh bất đồng bộ làm ghi đè tọa độ căn tay
+        let crop = cropMapRef.current[key];
+        if (!crop) {
+          if (autoFaceAlign && photo && !photo.startsWith("data:image/svg")) {
+            try {
+              const detected = await autoDetectFaceAndCrop(photo);
+              crop = { ...detected, manual: false };
+              cropMapRef.current[key] = crop;
+            } catch (e) {
+              crop = { zoom: 1, pan: { x: 0, y: 0 } };
+            }
+          } else {
+            crop = { zoom: 1, pan: { x: 0, y: 0 } };
+          }
         }
 
+        // Đảm bảo ảnh đã nạp xong kích thước tự nhiên trước khi render
+        if (photo && !photo.startsWith("data:image/svg")) {
+          await new Promise((res) => {
+            const im = new Image();
+            im.onload = () => res();
+            im.onerror = () => res();
+            im.src = photo;
+          });
+        }
+
+        setSelectedStudentId(st.id);
+        setPhotoZoom(crop.zoom);
+        setPhotoPan(crop.pan);
+        setCertData((prev) => ({
+          ...prev,
+          subjectKey: SUBJECT_THEMES[st.subject] ? st.subject : "Toán",
+          role: st.className ? `Học sinh lớp ${st.className}` : `Học sinh đội tuyển ${st.subject}`,
+          name: toVietnameseTitleCase(st.name),
+          prize: `ĐẠT ${st.prize.toUpperCase()} - MÔN ${st.subject.toUpperCase()}`,
+          metaText: st.dob ? `Ngày sinh: ${st.dob}` : "",
+          photo,
+        }));
+
         // Đợi React render DOM + SVG xong
-        await new Promise((r) => setTimeout(r, 120));
+        await new Promise((r) => setTimeout(r, 150));
         const dataUrl = await toPng(node, {
           width: 1920,
           height: 1080,
@@ -515,11 +599,13 @@ export default function App() {
       console.error("Lỗi xuất ZIP:", err);
       alert("Có lỗi khi xuất file ZIP hàng loạt.");
     } finally {
+      currentKeyRef.current = prevKey;
       setCertData(prevCert);
       setSelectedStudentId(prevId);
       setLayoutMode(prevLayout);
-      cropMapRef.current = prevCropMap;
-      loadCropFor(prevKey, prevCert.photo);
+      setPhotoZoom(prevZoom);
+      setPhotoPan(prevPan);
+      setIsManualLocked(Boolean(cropMapRef.current[prevKey]?.manual));
       setBatchProgress(null);
     }
   };
@@ -990,7 +1076,11 @@ export default function App() {
                     max="5"
                     step="0.02"
                     value={photoZoom}
-                    onChange={(e) => setPhotoZoom(parseFloat(e.target.value))}
+                    onChange={(e) => {
+                      const nextZ = parseFloat(e.target.value);
+                      setPhotoZoom(nextZ);
+                      saveManualCrop(nextZ, photoPan);
+                    }}
                     className="w-48 accent-sky-400 cursor-pointer"
                   />
                   <span className="font-mono w-12">{photoZoom.toFixed(2)}x</span>
@@ -998,6 +1088,7 @@ export default function App() {
                     onClick={() => {
                       setPhotoZoom(1);
                       setPhotoPan({ x: 0, y: 0 });
+                      saveManualCrop(1, { x: 0, y: 0 });
                     }}
                     className="flex items-center gap-1 font-semibold text-sky-300 hover:text-white"
                   >
@@ -1023,6 +1114,11 @@ export default function App() {
                     💡 <b className="text-slate-200">Đúp chuột vào ảnh</b> để căn chỉnh •{" "}
                     <b className="text-slate-200">Kéo thả ảnh</b> vào khung để thay ảnh
                   </span>
+                  {isManualLocked && (
+                    <span className="bg-emerald-950/80 border border-emerald-500/60 text-emerald-300 font-bold px-2.5 py-1 rounded-lg">
+                      🔒 Đã khóa vị trí căn tay
+                    </span>
+                  )}
                   <div className="ml-auto flex items-center gap-2">
                     <button
                       onClick={triggerAutoFaceDetect}
