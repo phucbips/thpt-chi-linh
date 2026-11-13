@@ -162,7 +162,7 @@ export async function autoDetectFaceAndCrop(imageSrc) {
 function calculateCropFromFace(faceX, faceY, faceW, faceH, imgW, imgH) {
   // Đường kính khung nhìn mục tiêu
   const targetFrameSize = 500;
-  const desiredFaceRatioInFrame = 0.44; // Khuôn mặt chiếm ~44% khung tròn
+  const desiredFaceRatioInFrame = 0.50; // Khuôn mặt chiếm ~50% khung tròn
   const desiredFacePixelSize = targetFrameSize * desiredFaceRatioInFrame;
 
   // Tỉ lệ scale ảnh

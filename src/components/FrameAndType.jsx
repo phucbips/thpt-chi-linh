@@ -121,10 +121,10 @@ export const EventTitle = ({ event, color, firstSize = 30, restSize = 23, classN
 // 3. RUY-BĂNG VÀNG CHỨA TÊN (tự co cỡ chữ, không bao giờ bị cắt "...")
 // ============================================================================
 export const RibbonNameBanner = ({ name, fontClass, fontFactor = 1, nameScale = 1, subtitle }) => {
-  const size = fitNameSize(name, { maxSize: 60, maxWidth: 520, factor: fontFactor, scale: nameScale });
+  const size = fitNameSize(name, { maxSize: 54, maxWidth: 430, factor: fontFactor, scale: nameScale });
   return (
-    <div className="relative z-30 -mt-10 flex flex-col items-center">
-      <div className="relative w-[700px] h-[140px] flex items-center justify-center">
+    <div className="relative z-30 -mt-14 flex flex-col items-center">
+      <div className="relative w-[650px] h-[132px] flex items-center justify-center">
         <svg viewBox="0 0 420 90" className="w-full h-full drop-shadow-2xl" style={{ overflow: "visible" }}>
           <defs>
             <linearGradient id="rb-main" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -147,7 +147,7 @@ export const RibbonNameBanner = ({ name, fontClass, fontFactor = 1, nameScale = 
           <path d="M 40,19 Q 210,31 380,19" stroke="#9a6b19" strokeWidth="1" strokeDasharray="3,3" fill="none" />
           <path d="M 40,63 Q 210,75 380,63" stroke="#9a6b19" strokeWidth="1" strokeDasharray="3,3" fill="none" />
         </svg>
-        <div className="absolute inset-0 flex items-center justify-center px-20">
+        <div className="absolute inset-0 flex items-center justify-center px-24">
           <span
             className={`${fontClass} whitespace-nowrap`}
             style={{

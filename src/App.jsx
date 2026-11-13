@@ -52,7 +52,7 @@ const DEFAULT_STUDENT_PHOTO =
 `);
 
 const DEFAULT_EVENT =
-  "KỲ THI CHỌN HỌC SINH GIỎI THÀNH PHỐ HẢI PHÒNG CẤP THPT\nNĂM HỌC 2026 - 2027 (QĐ 4366/QĐ-SGDĐT)";
+  "KỲ THI CHỌN HỌC SINH GIỎI THÀNH PHỐ HẢI PHÒNG CẤP THPT\nNĂM HỌC 2026 - 2027";
 
 export default function App() {
   const [students, setStudents] = useState(INITIAL_STUDENTS);
@@ -112,7 +112,7 @@ export default function App() {
     name: initialStudent.name,
     prize: `ĐẠT ${initialStudent.prize.toUpperCase()} - MÔN ${initialStudent.subject.toUpperCase()}`,
     metaText: initialStudent.dob ? `Ngày sinh: ${initialStudent.dob}` : "",
-    showMeta: true,
+    showMeta: false,
     event: DEFAULT_EVENT,
     photo: initialStudent.photo || DEFAULT_STUDENT_PHOTO,
   });

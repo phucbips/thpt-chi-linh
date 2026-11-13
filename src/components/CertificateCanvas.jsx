@@ -97,11 +97,11 @@ export const CertificateCanvas = ({
 
       {/* ============ BỐ CỤC 1: NGUYỆT QUẾ + RUY-BĂNG ============ */}
       {layoutMode === "ribbon" && (
-        <div className="relative z-20 w-full h-full flex items-center px-24">
-          <div className="w-[43%] h-full flex flex-col items-center justify-center pt-6">
-            <div className="relative w-[490px] h-[490px] flex items-center justify-center">
+        <div className="relative z-20 w-full h-full flex items-center px-20">
+          <div className="w-[44%] h-full flex flex-col items-center justify-center pt-2">
+            <div className="relative w-[570px] h-[570px] flex items-center justify-center">
               <GoldenLaurelWreath />
-              <SmartPhotoFrame {...frameProps} shape={theme.frameShape} size={490} />
+              <SmartPhotoFrame {...frameProps} shape={theme.frameShape} size={570} />
             </div>
             <RibbonNameBanner
               name={certData.name}
@@ -198,10 +198,10 @@ export const CertificateCanvas = ({
           </div>
 
           <div className="w-[42%] h-full flex items-center justify-center relative">
-            <div className="relative w-[530px] h-[530px] flex items-center justify-center">
+            <div className="relative w-[580px] h-[580px] flex items-center justify-center">
               <GraduationCapSvg />
               <GoldenLaurelWreath />
-              <SmartPhotoFrame {...frameProps} shape="circle" size={530} beaded />
+              <SmartPhotoFrame {...frameProps} shape="circle" size={580} beaded />
             </div>
           </div>
         </div>
@@ -211,8 +211,8 @@ export const CertificateCanvas = ({
       {layoutMode === "teacher" && (
         <div className="relative z-20 w-full h-full flex items-center px-24">
           <div className="w-[42%] h-full flex flex-col items-center justify-center pt-4">
-            <div className="relative w-[500px] h-[500px] flex items-center justify-center">
-              <SmartPhotoFrame {...frameProps} shape="starburst" size={500} />
+            <div className="relative w-[570px] h-[570px] flex items-center justify-center">
+              <SmartPhotoFrame {...frameProps} shape="starburst" size={570} />
             </div>
             <TeacherDualRibbons />
           </div>
