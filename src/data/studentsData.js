@@ -170,7 +170,7 @@ export const INITIAL_STUDENTS = [
     "prize": "Giải Nhất",
     "className": "12P",
     "teacher": "Cô Nguyễn Thị Hiền",
-    "photo": ""
+    "photo": "/photos/hs_52909.jpg"
   },
   {
     "id": 9,
@@ -612,9 +612,9 @@ export const INITIAL_STUDENTS = [
     "subject": "Tin học",
     "school": "THPT Chí Linh",
     "prize": "Giải Ba",
-    "className": "",
+    "className": "12B",
     "teacher": "Cô Vương Thị Thúy Nga",
-    "photo": ""
+    "photo": "/photos/hs_53001.jpg"
   },
   {
     "id": 46,
