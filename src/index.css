@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Be Vietnam Pro', sans-serif;
+    background-color: #020617;
+    color: #f8fafc;
+  }
+}
+
+.font-main { font-family: 'Be Vietnam Pro', sans-serif; }
+.font-jakarta { font-family: 'Plus Jakarta Sans', sans-serif; }
+.font-montserrat { font-family: 'Montserrat', sans-serif; }
+.font-serif-title { font-family: 'Playfair Display', serif; }
+.font-cinzel { font-family: 'Cinzel', serif; }
+
+.font-script-alex { font-family: 'Alex Brush', cursive; }
+.font-script-vibes { font-family: 'Great Vibes', cursive; }
+.font-script-dancing { font-family: 'Dancing Script', cursive; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0f172a; border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #64748b; }
