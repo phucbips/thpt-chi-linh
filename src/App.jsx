@@ -232,7 +232,7 @@ export default function App() {
       prize: summary.text,
       metaText: `Tổng cộng ${summary.total} học sinh đạt giải cấp Thành phố`,
       event:
-        "BỒI DƯỠNG HỌC SINH ĐẠT THÀNH TÍCH CAO\nKỲ THI CHỌN HỌC SINH GIỎI THÀNH PHỐ HẢI PHÒNG CẤP THPT\nNĂM HỌC 2026 - 2027",
+        "GIÁO VIÊN BỒI DƯỠNG ĐỘI TUYỂN HỌC SINH GIỎI THÀNH PHỐ HẢI PHÒNG\nNĂM HỌC 2026 - 2027",
       photo,
     }));
   };
@@ -507,7 +507,10 @@ export default function App() {
 
   // Xuất hàng loạt ZIP cho danh sách đang lọc
   const exportBatchZip = async () => {
-    if (filteredStudents.length === 0) return;
+    const isTeacherBatch = layoutMode === "teacher";
+    const batchItems = isTeacherBatch ? Object.keys(TEACHERS_BY_SUBJECT) : filteredStudents;
+    if (batchItems.length === 0) return;
+
     const node = document.getElementById("certificate-node");
     if (!node) return;
 
@@ -518,81 +521,139 @@ export default function App() {
     const prevZoom = photoZoom;
     const prevPan = { ...photoPan };
 
-    if (layoutMode === "teacher") setLayoutMode("ribbon");
     setIsCropMode(false);
-    setBatchProgress({ current: 0, total: filteredStudents.length });
+    setBatchProgress({ current: 0, total: batchItems.length });
 
     try {
       await document.fonts.ready;
       const zip = new JSZip();
-      for (let i = 0; i < filteredStudents.length; i++) {
-        const st = filteredStudents[i];
-        setBatchProgress({ current: i + 1, total: filteredStudents.length });
+      for (let i = 0; i < batchItems.length; i++) {
+        setBatchProgress({ current: i + 1, total: batchItems.length });
 
-        const key = `hs-${st.id}`;
-        currentKeyRef.current = key;
-        const photo = st.photo || DEFAULT_STUDENT_PHOTO;
+        if (isTeacherBatch) {
+          const subj = batchItems[i];
+          const teacherName = TEACHERS_BY_SUBJECT[subj] || `Giáo viên môn ${subj}`;
+          const summary = summarizePrizesBySubject(students, subj);
+          const photo = TEACHER_PHOTOS_BY_SUBJECT[subj] || DEFAULT_STUDENT_PHOTO;
+          const key = `gv-${subj}`;
+          currentKeyRef.current = key;
 
-        // Ưu tiên tuyệt đối tọa độ đã lưu (đặc biệt là tọa độ người dùng đã tự căn chỉnh tay!)
-        // Không gọi selectStudent(st) để tránh bất đồng bộ làm ghi đè tọa độ căn tay
-        let crop = cropMapRef.current[key];
-        if (!crop) {
-          if (autoFaceAlign && photo && !photo.startsWith("data:image/svg")) {
-            try {
-              const detected = await autoDetectFaceAndCrop(photo);
-              crop = { ...detected, manual: false };
-              cropMapRef.current[key] = crop;
-            } catch (e) {
+          let crop = cropMapRef.current[key];
+          if (!crop) {
+            if (autoFaceAlign && photo && !photo.startsWith("data:image/svg")) {
+              try {
+                const detected = await autoDetectFaceAndCrop(photo);
+                crop = { ...detected, manual: false };
+                cropMapRef.current[key] = crop;
+              } catch (e) {
+                crop = { zoom: 1, pan: { x: 0, y: 0 } };
+              }
+            } else {
               crop = { zoom: 1, pan: { x: 0, y: 0 } };
             }
-          } else {
-            crop = { zoom: 1, pan: { x: 0, y: 0 } };
           }
-        }
 
-        // Đảm bảo ảnh đã nạp xong kích thước tự nhiên trước khi render
-        if (photo && !photo.startsWith("data:image/svg")) {
-          await new Promise((res) => {
-            const im = new Image();
-            im.onload = () => res();
-            im.onerror = () => res();
-            im.src = photo;
+          if (photo && !photo.startsWith("data:image/svg")) {
+            await new Promise((res) => {
+              const im = new Image();
+              im.onload = () => res();
+              im.onerror = () => res();
+              im.src = photo;
+            });
+          }
+
+          setPhotoZoom(crop.zoom);
+          setPhotoPan(crop.pan);
+          setCertData((prev) => ({
+            ...prev,
+            subjectKey: "Giáo viên",
+            role: "Giáo viên bồi dưỡng đội tuyển",
+            name: teacherName,
+            prize: summary.text,
+            metaText: `Tổng cộng ${summary.total} học sinh đạt giải cấp Thành phố`,
+            event:
+              "GIÁO VIÊN BỒI DƯỠNG ĐỘI TUYỂN HỌC SINH GIỎI THÀNH PHỐ HẢI PHÒNG\nNĂM HỌC 2026 - 2027",
+            photo,
+          }));
+
+          await new Promise((r) => setTimeout(r, 150));
+          const dataUrl = await toPng(node, {
+            width: 1920,
+            height: 1080,
+            pixelRatio: 1,
+            cacheBust: true,
+          });
+          const base64 = dataUrl.split(",")[1];
+          const safeName = teacherName.replace(/\s+/g, "_");
+          zip.file(`${String(i + 1).padStart(2, "0")}_GV_${subj}_${safeName}.png`, base64, {
+            base64: true,
+          });
+        } else {
+          const st = batchItems[i];
+          const key = `hs-${st.id}`;
+          currentKeyRef.current = key;
+          const photo = st.photo || DEFAULT_STUDENT_PHOTO;
+
+          // Ưu tiên tuyệt đối tọa độ đã lưu (đặc biệt là tọa độ người dùng đã tự căn chỉnh tay!)
+          let crop = cropMapRef.current[key];
+          if (!crop) {
+            if (autoFaceAlign && photo && !photo.startsWith("data:image/svg")) {
+              try {
+                const detected = await autoDetectFaceAndCrop(photo);
+                crop = { ...detected, manual: false };
+                cropMapRef.current[key] = crop;
+              } catch (e) {
+                crop = { zoom: 1, pan: { x: 0, y: 0 } };
+              }
+            } else {
+              crop = { zoom: 1, pan: { x: 0, y: 0 } };
+            }
+          }
+
+          if (photo && !photo.startsWith("data:image/svg")) {
+            await new Promise((res) => {
+              const im = new Image();
+              im.onload = () => res();
+              im.onerror = () => res();
+              im.src = photo;
+            });
+          }
+
+          setSelectedStudentId(st.id);
+          setPhotoZoom(crop.zoom);
+          setPhotoPan(crop.pan);
+          setCertData((prev) => ({
+            ...prev,
+            subjectKey: SUBJECT_THEMES[st.subject] ? st.subject : "Toán",
+            role: st.className ? `Học sinh lớp ${st.className}` : `Học sinh đội tuyển ${st.subject}`,
+            name: toVietnameseTitleCase(st.name),
+            prize: `ĐẠT ${st.prize.toUpperCase()} - MÔN ${st.subject.toUpperCase()}`,
+            metaText: st.dob ? `Ngày sinh: ${st.dob}` : "",
+            photo,
+          }));
+
+          await new Promise((r) => setTimeout(r, 150));
+          const dataUrl = await toPng(node, {
+            width: 1920,
+            height: 1080,
+            pixelRatio: 1,
+            cacheBust: true,
+          });
+          const base64 = dataUrl.split(",")[1];
+          const safeName = st.name.replace(/\s+/g, "_");
+          zip.file(`${String(i + 1).padStart(2, "0")}_${st.subject}_${safeName}.png`, base64, {
+            base64: true,
           });
         }
-
-        setSelectedStudentId(st.id);
-        setPhotoZoom(crop.zoom);
-        setPhotoPan(crop.pan);
-        setCertData((prev) => ({
-          ...prev,
-          subjectKey: SUBJECT_THEMES[st.subject] ? st.subject : "Toán",
-          role: st.className ? `Học sinh lớp ${st.className}` : `Học sinh đội tuyển ${st.subject}`,
-          name: toVietnameseTitleCase(st.name),
-          prize: `ĐẠT ${st.prize.toUpperCase()} - MÔN ${st.subject.toUpperCase()}`,
-          metaText: st.dob ? `Ngày sinh: ${st.dob}` : "",
-          photo,
-        }));
-
-        // Đợi React render DOM + SVG xong
-        await new Promise((r) => setTimeout(r, 150));
-        const dataUrl = await toPng(node, {
-          width: 1920,
-          height: 1080,
-          pixelRatio: 1,
-          cacheBust: true,
-        });
-        const base64 = dataUrl.split(",")[1];
-        const safeName = st.name.replace(/\s+/g, "_");
-        zip.file(`${String(i + 1).padStart(2, "0")}_${st.subject}_${safeName}.png`, base64, {
-          base64: true,
-        });
       }
 
       const blob = await zip.generateAsync({ type: "blob" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `VinhDanh_THPT_ChiLinh_${filterSubject === "ALL" ? "TatCa" : filterSubject}.zip`;
+      a.download = isTeacherBatch
+        ? "VinhDanh_12_GiaoVien_THPT_ChiLinh.zip"
+        : `VinhDanh_THPT_ChiLinh_${filterSubject === "ALL" ? "TatCa" : filterSubject}.zip`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -1050,6 +1111,8 @@ export default function App() {
                   <FolderArchive className="w-4 h-4" />
                   {batchProgress
                     ? `Đang nén ${batchProgress.current}/${batchProgress.total}...`
+                    : layoutMode === "teacher"
+                    ? `Tải ZIP (12 Giáo viên)`
                     : `Tải ZIP (${filteredStudents.length} HS)`}
                 </button>
               </div>
