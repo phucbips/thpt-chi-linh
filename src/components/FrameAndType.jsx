@@ -200,6 +200,26 @@ export const SmartPhotoFrame = ({
   const uid = safeId(useId());
   const wrapRef = useRef(null);
   const [dragOver, setDragOver] = useState(false);
+  const [aspect, setAspect] = useState(1);
+
+  // Ghi nhận tỉ lệ khung hình tự nhiên của ảnh để không bao giờ bị cắt mất đỉnh đầu/chân ảnh dọc
+  useEffect(() => {
+    if (!photo) {
+      setAspect(1);
+      return;
+    }
+    let cancelled = false;
+    const im = new Image();
+    im.onload = () => {
+      if (!cancelled && im.naturalWidth && im.naturalHeight) {
+        setAspect(im.naturalWidth / im.naturalHeight);
+      }
+    };
+    im.src = photo;
+    return () => {
+      cancelled = true;
+    };
+  }, [photo]);
 
   // Lăn chuột để zoom (chỉ khi đang ở chế độ căn chỉnh) – cần listener non-passive
   useEffect(() => {
@@ -232,8 +252,10 @@ export const SmartPhotoFrame = ({
     if (src) onDropImage?.(src.trim());
   };
 
-  const imgW = 500 * zoom;
-  const imgH = 500 * zoom;
+  const baseW = aspect >= 1 ? 500 * aspect : 500;
+  const baseH = aspect >= 1 ? 500 : 500 / aspect;
+  const imgW = baseW * zoom;
+  const imgH = baseH * zoom;
   const imgX = 250 - imgW / 2 + panX;
   const imgY = 250 - imgH / 2 + panY;
 

@@ -732,7 +732,7 @@ export const INITIAL_STUDENTS = [
     "subject": "Vật lý",
     "school": "THPT Chí Linh",
     "prize": "Giải Ba",
-    "className": "",
+    "className": "12A",
     "teacher": "Cô Bùi Thị Huyền",
     "photo": "/photos/hs_52600.jpg"
   },

@@ -133,13 +133,19 @@ export default function App() {
       try {
         const detected = await autoDetectFaceAndCrop(photoSrc);
         cropMapRef.current[key] = detected;
-        setPhotoZoom(detected.zoom);
-        setPhotoPan(detected.pan);
+        if (currentKeyRef.current === key) {
+          setPhotoZoom(detected.zoom);
+          setPhotoPan(detected.pan);
+        }
       } catch (e) {
-        setPhotoZoom(1);
-        setPhotoPan({ x: 0, y: 0 });
+        if (currentKeyRef.current === key) {
+          setPhotoZoom(1);
+          setPhotoPan({ x: 0, y: 0 });
+        }
       } finally {
-        setIsDetectingFace(false);
+        if (currentKeyRef.current === key) {
+          setIsDetectingFace(false);
+        }
       }
     } else {
       setPhotoZoom(1);
@@ -147,6 +153,12 @@ export default function App() {
     }
     setIsCropMode(false);
   };
+
+  // Tự động nhận diện và căn chỉnh khuôn mặt cho học sinh đầu tiên khi mở trang
+  useEffect(() => {
+    loadCropFor(`hs-${initialStudent.id}`, initialStudent.photo || DEFAULT_STUDENT_PHOTO);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const selectStudent = (student) => {
     setSelectedStudentId(student.id);
@@ -206,13 +218,15 @@ export default function App() {
   };
 
   // ===================== KHUNG ẢNH KIỂU CANVA =====================
-  // Lưu vị trí căn chỉnh mỗi khi thay đổi
+  // Lưu vị trí căn chỉnh thủ công khi đang ở chế độ chỉnh sửa
   useEffect(() => {
-    cropMapRef.current[currentKeyRef.current] = { zoom: photoZoom, pan: photoPan };
-  }, [photoZoom, photoPan]);
+    if (isCropMode) {
+      cropMapRef.current[currentKeyRef.current] = { zoom: photoZoom, pan: photoPan };
+    }
+  }, [photoZoom, photoPan, isCropMode]);
 
   const clampPan = (v, zoom) => {
-    const lim = 120 + 250 * zoom;
+    const lim = 200 + 380 * zoom;
     return Math.max(-lim, Math.min(lim, v));
   };
 
@@ -229,7 +243,7 @@ export default function App() {
   };
 
   const handleZoomDelta = React.useCallback((d) => {
-    setPhotoZoom((z) => Math.max(0.5, Math.min(3, +(z + d).toFixed(2))));
+    setPhotoZoom((z) => Math.max(0.5, Math.min(5, +(z + d).toFixed(2))));
   }, []);
 
   // Thả ảnh vào khung → tự khớp hình khung + tự động nhận diện mặt vào tâm
@@ -973,7 +987,7 @@ export default function App() {
                   <input
                     type="range"
                     min="0.5"
-                    max="3"
+                    max="5"
                     step="0.02"
                     value={photoZoom}
                     onChange={(e) => setPhotoZoom(parseFloat(e.target.value))}
