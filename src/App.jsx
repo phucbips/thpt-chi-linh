@@ -4,6 +4,7 @@ import JSZip from "jszip";
 import * as XLSX from "xlsx";
 import {
   Award,
+  Check,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -12,12 +13,14 @@ import {
   GraduationCap,
   Image as ImageIcon,
   RotateCcw,
+  ScanFace,
   Search,
   Sparkles,
   Upload,
   UserCheck,
   ZoomIn,
 } from "lucide-react";
+import { autoDetectFaceAndCrop } from "./utils/faceDetection";
 import {
   INITIAL_STUDENTS,
   TEACHERS_BY_SUBJECT,
@@ -74,6 +77,10 @@ export default function App() {
   // Tinh chỉnh chữ
   const [titleFont, setTitleFont] = useState(TITLE_FONT_OPTIONS[0].id);
   const [nameScale, setNameScale] = useState(1);
+
+  // Tự động nhận diện khuôn mặt
+  const [autoFaceAlign, setAutoFaceAlign] = useState(true);
+  const [isDetectingFace, setIsDetectingFace] = useState(false);
   const dragRef = useRef({ active: false, startX: 0, startY: 0, origX: 0, origY: 0 });
 
   const [isExporting, setIsExporting] = useState(false);
@@ -110,18 +117,41 @@ export default function App() {
     photo: initialStudent.photo || DEFAULT_STUDENT_PHOTO,
   });
 
-  // Nạp lại vị trí căn chỉnh ảnh đã lưu cho từng người
-  const loadCropFor = (key) => {
+  // Nạp lại vị trí căn chỉnh ảnh đã lưu cho từng người (hoặc tự động nhận diện nếu chưa lưu)
+  const loadCropFor = async (key, photoSrc) => {
     currentKeyRef.current = key;
     const saved = cropMapRef.current[key];
-    setPhotoZoom(saved ? saved.zoom : 1);
-    setPhotoPan(saved ? saved.pan : { x: 0, y: 0 });
+    if (saved) {
+      setPhotoZoom(saved.zoom);
+      setPhotoPan(saved.pan);
+      setIsCropMode(false);
+      return;
+    }
+
+    if (autoFaceAlign && photoSrc && !photoSrc.startsWith("data:image/svg")) {
+      setIsDetectingFace(true);
+      try {
+        const detected = await autoDetectFaceAndCrop(photoSrc);
+        cropMapRef.current[key] = detected;
+        setPhotoZoom(detected.zoom);
+        setPhotoPan(detected.pan);
+      } catch (e) {
+        setPhotoZoom(1);
+        setPhotoPan({ x: 0, y: 0 });
+      } finally {
+        setIsDetectingFace(false);
+      }
+    } else {
+      setPhotoZoom(1);
+      setPhotoPan({ x: 0, y: 0 });
+    }
     setIsCropMode(false);
   };
 
   const selectStudent = (student) => {
     setSelectedStudentId(student.id);
-    loadCropFor(`hs-${student.id}`);
+    const photo = student.photo || DEFAULT_STUDENT_PHOTO;
+    loadCropFor(`hs-${student.id}`, photo);
     if (layoutMode === "teacher") setLayoutMode("ribbon");
     setCertData((prev) => ({
       ...prev,
@@ -131,15 +161,16 @@ export default function App() {
       prize: `ĐẠT ${student.prize.toUpperCase()} - MÔN ${student.subject.toUpperCase()}`,
       metaText: student.dob ? `Ngày sinh: ${student.dob}` : "",
       event: DEFAULT_EVENT,
-      photo: student.photo || DEFAULT_STUDENT_PHOTO,
+      photo,
     }));
   };
 
   const selectTeacherBySubject = (subj) => {
     const teacherName = TEACHERS_BY_SUBJECT[subj] || `Giáo viên môn ${subj}`;
     const summary = summarizePrizesBySubject(students, subj);
+    const photo = TEACHER_PHOTOS_BY_SUBJECT[subj] || DEFAULT_STUDENT_PHOTO;
     setSelectedStudentId(null);
-    loadCropFor(`gv-${subj}`);
+    loadCropFor(`gv-${subj}`, photo);
     setLayoutMode("teacher");
     setCertData((prev) => ({
       ...prev,
@@ -150,7 +181,7 @@ export default function App() {
       metaText: `Tổng cộng ${summary.total} học sinh đạt giải cấp Thành phố`,
       event:
         "BỒI DƯỠNG HỌC SINH ĐẠT THÀNH TÍCH CAO\nKỲ THI CHỌN HỌC SINH GIỎI THÀNH PHỐ HẢI PHÒNG CẤP THPT\nNĂM HỌC 2026 - 2027",
-      photo: TEACHER_PHOTOS_BY_SUBJECT[subj] || DEFAULT_STUDENT_PHOTO,
+      photo,
     }));
   };
 
@@ -201,14 +232,46 @@ export default function App() {
     setPhotoZoom((z) => Math.max(0.5, Math.min(3, +(z + d).toFixed(2))));
   }, []);
 
-  // Thả ảnh vào khung → tự khớp hình khung + lưu cho người đang chọn
-  const applyPhoto = (src) => {
+  // Thả ảnh vào khung → tự khớp hình khung + tự động nhận diện mặt vào tâm
+  const applyPhoto = async (src) => {
     setCertData((prev) => ({ ...prev, photo: src }));
     if (selectedStudentId != null && layoutMode !== "teacher") {
       setStudents((prev) => prev.map((s) => (s.id === selectedStudentId ? { ...s, photo: src } : s)));
     }
-    setPhotoZoom(1);
-    setPhotoPan({ x: 0, y: 0 });
+
+    if (autoFaceAlign && src && !src.startsWith("data:image/svg")) {
+      setIsDetectingFace(true);
+      try {
+        const detected = await autoDetectFaceAndCrop(src);
+        cropMapRef.current[currentKeyRef.current] = detected;
+        setPhotoZoom(detected.zoom);
+        setPhotoPan(detected.pan);
+      } catch (e) {
+        setPhotoZoom(1);
+        setPhotoPan({ x: 0, y: 0 });
+      } finally {
+        setIsDetectingFace(false);
+      }
+    } else {
+      setPhotoZoom(1);
+      setPhotoPan({ x: 0, y: 0 });
+    }
+  };
+
+  // Nút bấm thủ công "Căn tâm mặt tự động"
+  const triggerAutoFaceDetect = async () => {
+    if (!certData.photo || certData.photo.startsWith("data:image/svg")) return;
+    setIsDetectingFace(true);
+    try {
+      const detected = await autoDetectFaceAndCrop(certData.photo);
+      cropMapRef.current[currentKeyRef.current] = detected;
+      setPhotoZoom(detected.zoom);
+      setPhotoPan(detected.pan);
+    } catch (e) {
+      console.warn(e);
+    } finally {
+      setIsDetectingFace(false);
+    }
   };
 
   useEffect(() => {
@@ -388,6 +451,7 @@ export default function App() {
     const prevLayout = layoutMode;
     const prevKey = currentKeyRef.current;
 
+    const prevCropMap = { ...cropMapRef.current };
     if (layoutMode === "teacher") setLayoutMode("ribbon");
     setIsCropMode(false);
     setBatchProgress({ current: 0, total: filteredStudents.length });
@@ -399,6 +463,18 @@ export default function App() {
         const st = filteredStudents[i];
         setBatchProgress({ current: i + 1, total: filteredStudents.length });
         selectStudent(st);
+
+        // Nếu bật Auto Face Align và chưa có tọa độ crop, tự tính toán tức thì
+        const key = `hs-${st.id}`;
+        if (autoFaceAlign && !cropMapRef.current[key] && st.photo && !st.photo.startsWith("data:image/svg")) {
+          try {
+            const detected = await autoDetectFaceAndCrop(st.photo);
+            cropMapRef.current[key] = detected;
+            setPhotoZoom(detected.zoom);
+            setPhotoPan(detected.pan);
+          } catch (e) {}
+        }
+
         // Đợi React render DOM + SVG xong
         await new Promise((r) => setTimeout(r, 120));
         const dataUrl = await toPng(node, {
@@ -428,7 +504,8 @@ export default function App() {
       setCertData(prevCert);
       setSelectedStudentId(prevId);
       setLayoutMode(prevLayout);
-      loadCropFor(prevKey);
+      cropMapRef.current = prevCropMap;
+      loadCropFor(prevKey, prevCert.photo);
       setBatchProgress(null);
     }
   };
@@ -686,10 +763,21 @@ export default function App() {
                   <span className="font-bold text-slate-300 flex items-center gap-1">
                     <ImageIcon className="w-3.5 h-3.5 text-sky-400" /> Thư viện ảnh ({photoLibrary.length})
                   </span>
-                  <label className="cursor-pointer text-sky-400 hover:text-sky-300 font-semibold flex items-center gap-1">
-                    <Upload className="w-3 h-3" /> Thêm ảnh
-                    <input type="file" accept="image/*" multiple onChange={handleLibraryUpload} className="hidden" />
-                  </label>
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-1.5 cursor-pointer text-[11px] text-amber-300 hover:text-amber-200" title="Tự động nhận diện khuôn mặt và đưa vào tâm khung">
+                      <input
+                        type="checkbox"
+                        checked={autoFaceAlign}
+                        onChange={(e) => setAutoFaceAlign(e.target.checked)}
+                        className="rounded accent-amber-400"
+                      />
+                      <span>Tự căn tâm mặt AI</span>
+                    </label>
+                    <label className="cursor-pointer text-sky-400 hover:text-sky-300 font-semibold flex items-center gap-1">
+                      <Upload className="w-3 h-3" /> Thêm ảnh
+                      <input type="file" accept="image/*" multiple onChange={handleLibraryUpload} className="hidden" />
+                    </label>
+                  </div>
                 </div>
                 <div className="grid grid-cols-6 gap-1.5 max-h-36 overflow-y-auto pr-1">
                   {photoLibrary.map((p, idx) => (
@@ -902,6 +990,13 @@ export default function App() {
                     <RotateCcw className="w-3.5 h-3.5" /> Đặt lại
                   </button>
                   <button
+                    onClick={triggerAutoFaceDetect}
+                    disabled={isDetectingFace}
+                    className="flex items-center gap-1.5 font-bold text-amber-300 hover:text-amber-200 bg-amber-950/60 px-2.5 py-1 rounded-lg border border-amber-600/60"
+                  >
+                    <ScanFace className="w-3.5 h-3.5" /> {isDetectingFace ? "Đang nhận diện..." : "Tự căn lại mặt"}
+                  </button>
+                  <button
                     onClick={() => setIsCropMode(false)}
                     className="ml-auto bg-sky-500 hover:bg-sky-400 text-slate-950 font-extrabold px-4 py-1.5 rounded-lg"
                   >
@@ -912,14 +1007,24 @@ export default function App() {
                 <>
                   <span>
                     💡 <b className="text-slate-200">Đúp chuột vào ảnh</b> để căn chỉnh •{" "}
-                    <b className="text-slate-200">Kéo thả ảnh</b> từ Thư viện/máy tính vào khung để thay ảnh
+                    <b className="text-slate-200">Kéo thả ảnh</b> vào khung để thay ảnh
                   </span>
-                  <button
-                    onClick={() => setIsCropMode(true)}
-                    className="ml-auto bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold px-3 py-1.5 rounded-lg"
-                  >
-                    ✂️ Căn chỉnh ảnh
-                  </button>
+                  <div className="ml-auto flex items-center gap-2">
+                    <button
+                      onClick={triggerAutoFaceDetect}
+                      disabled={isDetectingFace}
+                      className="bg-amber-950/60 hover:bg-amber-900/60 border border-amber-600/60 text-amber-300 font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5"
+                      title="Tự động nhận diện khuôn mặt và đưa vào giữa khung"
+                    >
+                      <ScanFace className="w-3.5 h-3.5" /> {isDetectingFace ? "Đang quét mặt..." : "Tự căn tâm mặt"}
+                    </button>
+                    <button
+                      onClick={() => setIsCropMode(true)}
+                      className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-3 py-1.5 rounded-lg"
+                    >
+                      ✂️ Căn chỉnh thủ công
+                    </button>
+                  </div>
                 </>
               )}
             </div>
